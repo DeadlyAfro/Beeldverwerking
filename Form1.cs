@@ -76,6 +76,8 @@ namespace INFOIBV
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
+            Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
+
 			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
 
 			// TODO: Find center of each object
@@ -90,18 +92,6 @@ namespace INFOIBV
 
 			float[,] normalizedImage = NormalizeFloats(thresholdImage);
 			Image = ConvertToImage(normalizedImage);
-
-			//objectColor = 1;
-			//searchForObjects();
-			//for (int x = 0; x < Width; x++)
-			//{
-			//	for (int y = 0; y < Height; y++)
-			//	{
-			//		int color = Objects[x, y];
-			//		Color updatedColor = Color.FromArgb(color, color, color); //object image
-			//		ImageOut[x, y] = updatedColor;                             // Set the new pixel color at coordinate (x,y)
-			//	}
-			//}
 
 			//==========================================================================================
 
@@ -382,15 +372,26 @@ namespace INFOIBV
 			progressBar.Value = progressBar.Minimum;
 			return output.ToArray();
 		}
-	}
+        private Detection[] FilterBySize(Detection[] input, int MinPixels)
+        {
+            List<Detection> objects = new List<Detection>();
+            foreach (Detection obj in input)
+                if (obj.size > MinPixels * MinPixels && obj.size < (Width / 2) * (Height / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
+                    objects.Add(obj);                                                           //And all objects with a surface larger than 1/4th of the image
+            Detection[] output = new Detection[objects.Count];
+            return output = objects.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
+        }
+    }
 
 	class Detection
 	{
 		private Point[] point;
+        public int size;
 
 		public Detection(Point[] point)
 		{
 			this.point = point;
+            size = point.Count();
 		}
 	}
 }
