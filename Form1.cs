@@ -14,13 +14,8 @@ namespace INFOIBV
 	{
 		private Bitmap InputImage;
 		private Bitmap OutputImage;
-		private Color[,] Image;
-		private float[,] ImageCalc;
-		private int[,] Edges;
-		private int[,] Objects;
-		public int objectColor;
-		private Color[,] ImageOut;
-		private int Height, Width;
+
+		private int Width, Height;
 
 		public INFOIBV()
 		{
@@ -39,11 +34,7 @@ namespace INFOIBV
 					InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // Dimension check
 					MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
 				else
-				{
 					pictureBox1.Image = (Image)InputImage;                 // Display input image
-					Height = InputImage.Size.Height;
-					Width = InputImage.Size.Width;
-				}
 			}
 		}
 
@@ -51,23 +42,20 @@ namespace INFOIBV
 		{
 			if (InputImage == null) return;                                 // Get out if no input image
 			if (OutputImage != null) OutputImage.Dispose();                 // Reset output image
-			OutputImage = new Bitmap(Width, Height); // Create new output image
-			Image = new Color[Width, Height]; // Create array to speed-up operations (Bitmap functions are very slow)
-			ImageCalc = new float[Width, Height];
-			Edges = new int[Width, Height];
-			Objects = new int[Width, Height];
-			ImageOut = new Color[Width, Height];
+			OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // Create new output image
+			Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // Create array to speed-up operations (Bitmap functions are very slow)
+
 			// Setup progress bar
 			progressBar.Visible = true;
 			progressBar.Minimum = 1;
-			progressBar.Maximum = Width * Height;
+			progressBar.Maximum = InputImage.Size.Width * InputImage.Size.Height;
 			progressBar.Value = 1;
 			progressBar.Step = 1;
 
 			// Copy input Bitmap to array            
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < InputImage.Size.Width; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < InputImage.Size.Height; y++)
 				{
 					Image[x, y] = InputImage.GetPixel(x, y);                // Set pixel color in array at (x,y)
 				}
@@ -83,6 +71,8 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 5);
 
+			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
+
 			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
 
 			// TODO: Find center of each object
@@ -96,7 +86,7 @@ namespace INFOIBV
 			// TODO: Show detections on original image
 
 			float[,] normalizedImage = NormalizeFloats(thresholdImage);
-			ImageOut = ConvertToImage(normalizedImage);
+			Image = ConvertToImage(normalizedImage);
 
 			//objectColor = 1;
 			//searchForObjects();
@@ -117,13 +107,22 @@ namespace INFOIBV
 			{
 				for (int y = 0; y < Height; y++)
 				{
-					OutputImage.SetPixel(x, y, ImageOut[x, y]);               // Set the pixel color at coordinate (x,y)
+					OutputImage.SetPixel(x, y, Image[x, y]);               // Set the pixel color at coordinate (x,y)
 				}
 			}
 
 			pictureBox2.Image = (Image)OutputImage;                         // Display output image
 			progressBar.Visible = false;                                    // Hide progress bar
 		}
+
+		private void saveButton_Click(object sender, EventArgs e)
+		{
+			if (OutputImage == null) return;                                // Get out if no output image
+			if (saveImageDialog.ShowDialog() == DialogResult.OK)
+				OutputImage.Save(saveImageDialog.FileName);                 // Save the output image
+		}
+
+		// ===== PROCESSING FUNCTIONS =====
 
 		private float[,] NormalizeFloats(float[,] input)
 		{
@@ -155,7 +154,7 @@ namespace INFOIBV
 				{
 					float value = input[x, y];
 
-					if(MAX - MIN == 0) // Catch devide-by-zero
+					if (MAX - MIN == 0) // Catch devide-by-zero
 						throw new Exception("SHIT");
 
 					value = (value - MIN) / (MAX - MIN);
@@ -291,53 +290,92 @@ namespace INFOIBV
 			return output;
 		}
 
-		private void saveButton_Click(object sender, EventArgs e)
+		private Detection[] FloodFillExtraction(float[,] input)
 		{
-			if (OutputImage == null) return;                                // Get out if no output image
-			if (saveImageDialog.ShowDialog() == DialogResult.OK)
-				OutputImage.Save(saveImageDialog.FileName);                 // Save the output image
-		}
-
-		public void checkNeighbours(int x, int y)
-		{
-			Objects[x, y] = objectColor;
-			if (x > 0)                                                          //stay within image
-				if (Edges[x - 1, y] == 0 && Objects[x - 1, y] == 0)         //if the pixel on the left is black
-				{
-					checkNeighbours(x - 1, y);                                  //recusrively check for connected pixels
-				}
-			if (x < Width - 1)                                                      //stay within image
-				if (Edges[x + 1, y] == 0 && Objects[x + 1, y] == 0)         //if the pixel on the right is black
-				{
-					checkNeighbours(x + 1, y);                                  //recusrively check for connected pixels
-				}
-			if (y > 0)                                                          //stay within image
-				if (Edges[x, y - 1] == 0 && Objects[x, y - 1] == 0)         //if the pixel above is black
-				{
-					checkNeighbours(x, y - 1);                                  //recusrively check for connected pixels
-				}
-			if (y < Height - 1)                                                     //stay within image
-				if (Edges[x, y + 1] == 0 && Objects[x, y + 1] == 0)         //if the pixel beneath is black
-				{
-					checkNeighbours(x, y + 1);                                  //recusrively check for connected pixels
-				}
-
-		}
-
-		public void searchForObjects()
-		{
+			// STAGE 0: Copy the input to an array that can be manipulated
+			int[,] flood = new int[Width, Height];
 			for (int x = 0; x < Width; x++)
-			{                                                       //for all pixels in the image
+				for (int y = 0; y < Height; y++)
+					flood[x, y] = (int)input[x, y]; // Copy the input to an array we can process
+
+			progressBar.Value = progressBar.Minimum;
+
+			// STAGE 1: Use flood fill to find all objects and assign an identifier to all their pixels
+			int ObjectIdentifier = 2; // At this stage, 0 should represent an object and 1 should represent an edge.
+			for (int x = 0; x < Width; x++)
+			{
 				for (int y = 0; y < Height; y++)
 				{
-					if (Edges[x, y] == 0 && Objects[x, y] == 0)    //check if they are black
+					if (input[x, y] == 0) // Discovered new object
 					{
-						checkNeighbours(x, y);                      //and see if they are connected to any other black pixels
-						objectColor += 20;
+						Queue<Point> work = new Queue<Point>(); // Keep track of BFS frontier
+						work.Enqueue(new Point(x, y)); // Start with the point we just found
+
+						while (work.Count > 0) // Continue until every pixel of the object has been processed
+						{
+							Point p = work.Dequeue();
+
+							flood[p.X, p.Y] = ObjectIdentifier;
+
+							if (flood[p.X - 1, p.Y] == 0)
+								work.Enqueue(new Point(p.X - 1, p.Y));
+							if (flood[p.X + 1, p.Y] == 0)
+								work.Enqueue(new Point(p.X - 1, p.Y));
+							if (flood[p.X, p.Y - 1] == 0)
+								work.Enqueue(new Point(p.X - 1, p.Y));
+							if (flood[p.X, p.Y + 1] == 0)
+								work.Enqueue(new Point(p.X - 1, p.Y));
+						}
+
+						ObjectIdentifier++; // Increase the counter for the next detection
 					}
 
+					progressBar.PerformStep(); // Increment progress bar
 				}
 			}
+
+			progressBar.Value = progressBar.Minimum;
+
+			// STAGE 2: Group all pixels of each object
+			List<List<Point>> extract = new List<List<Point>>();
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					if (flood[x, y] > 1) // Part of object found
+					{
+						int Identifier = flood[x, y] - 2;
+
+						if (extract.Count < Identifier) // Should never happen
+							throw new Exception("SHIT");
+
+						if (extract.Count == Identifier) // Object not yet stored
+							extract.Add(new List<Point>());
+
+						extract[Identifier].Add(new Point(x, y)); // Add point to the correct object
+					}
+
+					progressBar.PerformStep(); // Increment progress bar
+				}
+			}
+
+			// STAGE 3: Reconstruct a detected object from its pixels.
+			Detection[] output = new Detection[extract.Count];
+			for (int i = 0; i < extract.Count; i++)
+				output[i] = new Detection(extract[i].ToArray());
+
+			progressBar.Value = progressBar.Minimum;
+			return output.ToArray();
+		}
+	}
+
+	class Detection
+	{
+		private Point[] point;
+
+		public Detection(Point[] point)
+		{
+			this.point = point;
 		}
 	}
 }
