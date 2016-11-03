@@ -83,7 +83,6 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 5);
 
-
 			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
 
 			// TODO: Find center of each object
@@ -156,12 +155,12 @@ namespace INFOIBV
 				{
 					float value = input[x, y];
 
-					if(MAX - MIN == 0)
+					if(MAX - MIN == 0) // Catch devide-by-zero
 						throw new Exception("SHIT");
 
 					value = (value - MIN) / (MAX - MIN);
 
-					if (value < 0 || value > 1 || float.IsNaN(value))
+					if (value < 0 || value > 1 || float.IsNaN(value)) // Still something went wrong
 						throw new Exception("ALSO SHIT");
 
 					output[x, y] = value;
@@ -250,9 +249,15 @@ namespace INFOIBV
 					float value = 0;
 
 					if (0 < x && x < Width - 1)
-						value += (-input[x - 1, y] + input[x + 1, y]) / 3f; // Horizontal (-1, 0, 1) kernel
+					{
+						value += Math.Abs((-input[x - 1, y] + input[x + 1, y]) / 3f); // Horizontal (-1, 0, 1) kernel
+						value += Math.Abs((input[x - 1, y] - input[x + 1, y]) / 3f); // Horizontal (1, 0, -1) kernel
+					}
 					if (0 < y && y < Height - 1)
-						value += (-input[x, y - 1] + input[x, y + 1]) / 3f; // Vertical (-1, 0, 1) kernel
+					{
+						value += Math.Abs((-input[x, y - 1] + input[x, y + 1]) / 3f); // Vertical (-1, 0, 1) kernel
+						value += Math.Abs((input[x, y - 1] - input[x, y + 1]) / 3f); // Vertical (1, 0, -1) kernel
+					}
 
 					output[x, y] = value;
 
