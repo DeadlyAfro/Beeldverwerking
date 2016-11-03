@@ -74,7 +74,6 @@ namespace INFOIBV
 			}
 
 			//==========================================================================================
-			// TODO: include here your own code
 
 			Color[,] grayscaleImage = ConvertToGrayscale(Image);
 
@@ -84,31 +83,34 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 5);
 
-			return; // REFACTORING IN PROGRESS
 
-			// Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
+			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
 
-			// Find center of each object
+			// TODO: Find center of each object
 
-			// Scan object for shape
+			// TODO: Scan object for shape
 
-			// Normalize shape curve
+			// TODO: Normalize shape curve
 
-			// Compare curve with reference (which needs to be constructed)
+			// TODO: Compare curve with reference (which needs to be constructed)
 
-			// Show detections on original image
+			// TODO: Show detections on original image
 
-			objectColor = 1;
-			searchForObjects();
-			for (int x = 0; x < Width; x++)
-			{
-				for (int y = 0; y < Height; y++)
-				{
-					int color = Objects[x, y];
-					Color updatedColor = Color.FromArgb(color, color, color); //object image
-					ImageOut[x, y] = updatedColor;                             // Set the new pixel color at coordinate (x,y)
-				}
-			}
+			float[,] normalizedImage = NormalizeFloats(thresholdImage);
+			ImageOut = ConvertToImage(normalizedImage);
+
+			//objectColor = 1;
+			//searchForObjects();
+			//for (int x = 0; x < Width; x++)
+			//{
+			//	for (int y = 0; y < Height; y++)
+			//	{
+			//		int color = Objects[x, y];
+			//		Color updatedColor = Color.FromArgb(color, color, color); //object image
+			//		ImageOut[x, y] = updatedColor;                             // Set the new pixel color at coordinate (x,y)
+			//	}
+			//}
+
 			//==========================================================================================
 
 			// Copy array to output Bitmap
@@ -122,6 +124,73 @@ namespace INFOIBV
 
 			pictureBox2.Image = (Image)OutputImage;                         // Display output image
 			progressBar.Visible = false;                                    // Hide progress bar
+		}
+
+		private float[,] NormalizeFloats(float[,] input)
+		{
+			float[,] output = new float[Width, Height];
+			progressBar.Value = progressBar.Minimum;
+
+			float MIN = float.MaxValue, MAX = float.MinValue;
+
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					float value = input[x, y];
+
+					if (value < MIN)
+						MIN = value;
+					if (value > MAX)
+						MAX = value;
+
+					progressBar.PerformStep(); // Increment progress bar
+				}
+			}
+
+			progressBar.Value = progressBar.Minimum;
+
+			MAX += MIN; // Offset MAX to allow for easy division to normalize value
+
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					float value = input[x, y];
+
+					value += MIN;
+					value /= MAX;
+
+					output[x, y] = value;
+
+					progressBar.PerformStep(); // Increment progress bar
+				}
+			}
+
+			progressBar.Value = progressBar.Minimum;
+			return output;
+		}
+
+		private Color[,] ConvertToImage(float[,] input)
+		{
+			Color[,] output = new Color[Width, Height];
+			progressBar.Value = progressBar.Minimum;
+
+			for (int x = 0; x < Width; x++)
+			{
+				for (int y = 0; y < Height; y++)
+				{
+					float value = input[x, y];
+					int grayValue = (int)Math.Round(value * 255);
+
+					output[x, y] = Color.FromArgb(grayValue, grayValue, grayValue);
+
+					progressBar.PerformStep(); // Increment progress bar
+				}
+			}
+
+			progressBar.Value = progressBar.Minimum;
+			return output;
 		}
 
 		private Color[,] ConvertToGrayscale(Color[,] input)
