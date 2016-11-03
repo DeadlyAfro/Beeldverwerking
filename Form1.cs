@@ -63,6 +63,9 @@ namespace INFOIBV
 
 			//==========================================================================================
 
+			Width = InputImage.Size.Width;
+			Height = InputImage.Size.Height;
+
 			Color[,] grayscaleImage = ConvertToGrayscale(Image);
 
 			float[,] floatImage = ConvertToFloat(grayscaleImage);
@@ -203,7 +206,7 @@ namespace INFOIBV
 			{
 				for (int y = 0; y < Height; y++)
 				{
-					Color inputColor = Image[x, y];
+					Color inputColor = input[x, y];
 					int grayscale = (int)(inputColor.R * 0.3 + inputColor.G * 0.59 + inputColor.B * 0.11); // Calculate grayscale value
 					Color outputColor = Color.FromArgb(grayscale, grayscale, grayscale);
 					output[x, y] = outputColor;
@@ -306,7 +309,7 @@ namespace INFOIBV
 			{
 				for (int y = 0; y < Height; y++)
 				{
-					if (input[x, y] == 0) // Discovered new object
+					if (flood[x, y] == 0) // Discovered new object
 					{
 						Queue<Point> work = new Queue<Point>(); // Keep track of BFS frontier
 						work.Enqueue(new Point(x, y)); // Start with the point we just found
@@ -317,14 +320,26 @@ namespace INFOIBV
 
 							flood[p.X, p.Y] = ObjectIdentifier;
 
-							if (flood[p.X - 1, p.Y] == 0)
+							if (p.X > 0 && flood[p.X - 1, p.Y] == 0)
+							{
 								work.Enqueue(new Point(p.X - 1, p.Y));
-							if (flood[p.X + 1, p.Y] == 0)
-								work.Enqueue(new Point(p.X - 1, p.Y));
-							if (flood[p.X, p.Y - 1] == 0)
-								work.Enqueue(new Point(p.X - 1, p.Y));
-							if (flood[p.X, p.Y + 1] == 0)
-								work.Enqueue(new Point(p.X - 1, p.Y));
+								flood[p.X - 1, p.Y] = ObjectIdentifier;
+							}
+							if (p.X < Width - 1 && flood[p.X + 1, p.Y] == 0)
+							{
+								work.Enqueue(new Point(p.X + 1, p.Y));
+								flood[p.X + 1, p.Y] = ObjectIdentifier;
+							}
+							if (p.Y > 0 && flood[p.X, p.Y - 1] == 0)
+							{
+								work.Enqueue(new Point(p.X, p.Y - 1));
+								flood[p.X, p.Y - 1] = ObjectIdentifier;
+							}
+							if (p.Y < Height - 1 && flood[p.X, p.Y + 1] == 0)
+							{
+								work.Enqueue(new Point(p.X, p.Y + 1));
+								flood[p.X, p.Y + 1] = ObjectIdentifier;
+							}
 						}
 
 						ObjectIdentifier++; // Increase the counter for the next detection
