@@ -150,16 +150,16 @@ namespace INFOIBV
 
 			progressBar.Value = progressBar.Minimum;
 
-			MAX += MIN; // Offset MAX to allow for easy division to normalize value
-
 			for (int x = 0; x < Width; x++)
 			{
 				for (int y = 0; y < Height; y++)
 				{
 					float value = input[x, y];
 
-					value += MIN;
-					value /= MAX;
+					value = (value - MIN) / (MAX - MIN);
+
+					if (value < 0 || value > 1)
+						throw new Exception("SHIT");
 
 					output[x, y] = value;
 
@@ -247,9 +247,15 @@ namespace INFOIBV
 					float value = 0;
 
 					if (0 < x && x < Width - 1)
+					{
 						value += (-input[x - 1, y] + input[x + 1, y]) / 3f; // Horizontal (-1, 0, 1) kernel
+						value += (input[x - 1, y] - input[x + 1, y]) / 3f; // Horizontal (1, 0, -1) kernel
+					}
 					if (0 < y && y < Height - 1)
+					{
 						value += (-input[x, y - 1] + input[x, y + 1]) / 3f; // Vertical (-1, 0, 1) kernel
+						value += (input[x, y - 1] - input[x, y + 1]) / 3f; // Vertical (-1, 0, 1) kernel
+					}
 
 					output[x, y] = value;
 
