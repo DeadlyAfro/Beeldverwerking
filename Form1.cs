@@ -1,12 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
 using System.Windows.Forms;
-using System.IO;
+
+using Vector = System.Windows.Vector;
 
 namespace INFOIBV
 {
@@ -396,6 +394,22 @@ namespace INFOIBV
 		{
 			get; private set;
 		}
+		public int Left
+		{
+			get; private set;
+		}
+		public int Right
+		{
+			get; private set;
+		}
+		public int Top
+		{
+			get; private set;
+		}
+		public int Bottom
+		{
+			get; private set;
+		}
 
 		private PointF _center;
 		public PointF Center
@@ -433,9 +447,27 @@ namespace INFOIBV
 		{
 			Points = points;
 			Size = points.Count();
+			CalculateBoundingBox();
+		}
 
-			// Center = CalculateCenter();
-			// BoundaryCurve = CalculateBoundary();
+		private void CalculateBoundingBox()
+		{
+			Left = int.MaxValue;
+			Right = int.MinValue;
+			Top = int.MinValue;
+			Bottom = int.MaxValue;
+
+			foreach(Point p in Points)
+			{
+				if (p.X < Left)
+					Left = p.X;
+				if (p.X > Right)
+					Right = p.X;
+				if (p.Y > Top)
+					Top = p.Y;
+				if (p.Y < Bottom)
+					Bottom = p.Y;
+			}
 		}
 
 		private PointF CalculateCenter()
@@ -446,6 +478,24 @@ namespace INFOIBV
 		private float[] CalculateBoundary()
 		{
 			const int STEPS = 360;
+			const double INTERVAL = 360.0 / STEPS;
+
+			BoundaryCurve = new float[STEPS];
+			Vector CenterVec = new Vector(Center.X, Center.Y);
+			
+			for(int i = 0; i < STEPS; i++)
+			{
+				double degrees = i * INTERVAL;
+				double radians = degrees * Math.PI / 180;
+				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / 2;
+
+				Vector pos = CenterVec;
+
+				//while()
+				//{
+
+				//}
+			}
 
 			throw new NotImplementedException();
 		}
