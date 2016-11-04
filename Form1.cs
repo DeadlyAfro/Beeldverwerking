@@ -76,12 +76,6 @@ namespace INFOIBV
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
 
-			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
-
-			// TODO: Find center of each object
-
-			// TODO: Scan object for shape
-
 			// TODO: Normalize shape curve
 
 			// TODO: Compare curve with reference (which needs to be constructed)
@@ -472,7 +466,18 @@ namespace INFOIBV
 
 		private PointF CalculateCenter()
 		{
-			throw new NotImplementedException();
+            float totalX = 0.0f;
+            float totalY = 0.0f;
+
+            for(int i = 0; i < Size; i++)
+            {
+                totalX += Points[i].X;
+                totalY += Points[i].Y;
+            }
+
+            PointF center = new PointF(totalX / Size, totalY / Size);
+
+            return center;
 		}
 
 		private float[] CalculateBoundary()
@@ -491,7 +496,7 @@ namespace INFOIBV
 
 				Vector pos = CenterVec;
 
-				//while()
+				//while ()
 				//{
 
 				//}
