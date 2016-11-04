@@ -464,7 +464,7 @@ namespace INFOIBV
 			}
 		}
 
-		private PointF CalculateCenter()
+		private void CalculateCenter()
 		{
             float totalX = 0.0f;
             float totalY = 0.0f;
@@ -476,33 +476,44 @@ namespace INFOIBV
             }
 
             PointF center = new PointF(totalX / Size, totalY / Size);
-
-            return center;
 		}
 
-		private float[] CalculateBoundary()
+		private void CalculateBoundary()
 		{
+			// Initialize constant
 			const int STEPS = 360;
 			const double INTERVAL = 360.0 / STEPS;
 
-			BoundaryCurve = new float[STEPS];
-			Vector CenterVec = new Vector(Center.X, Center.Y);
-			
-			for(int i = 0; i < STEPS; i++)
+			// Create a temporary bool[,] representation of the object
+			int Width = Right - Left, Height = Bottom - Top;
+			bool[,] workspace = new bool[Width, Height];
+			foreach (Point p in Points)
+				workspace[p.X - Left, p.Y - Top] = true;
+
+			BoundaryCurve = new float[STEPS]; // Initialize an array to store the results
+			Vector CenterVec = new Vector(Center.X - Left, Center.Y - Top); // Calculate the center of the workspace
+
+			for(int i = 0; i < STEPS; i++) // Loop over the requested number of directions
 			{
+				// Construct a vector to walk over the workspace with
 				double degrees = i * INTERVAL;
 				double radians = degrees * Math.PI / 180;
 				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / 2;
+				Vector pos = CenterVec; // Set the starting position of the walker
 
-				Vector pos = CenterVec;
+				while (pos.X > 0 && pos.X < Width && pos.Y > 0 && pos.Y < Height) // Keep walking until we run outside the workspace
+				{
+					int x = (int)Math.Round(pos.X);
+					int y = (int)Math.Round(pos.Y);
 
-				//while ()
-				//{
+					if (workspace[x, y]) // If our current position is part of the object
+						// Overwrite any previous value, which means that we detect the outside edges
+						// The default value is 0, which means that no detection defaults to 0
+						BoundaryCurve[i] = (float)(new Vector(pos.X - CenterVec.X, pos.Y - CenterVec.Y)).Length;
 
-				//}
+					pos += vec; // Move the walker
+				}
 			}
-
-			throw new NotImplementedException();
 		}
 	}
 }
