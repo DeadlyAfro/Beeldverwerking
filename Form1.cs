@@ -397,14 +397,36 @@ namespace INFOIBV
 			get; private set;
 		}
 
+		private PointF _center;
 		public PointF Center
 		{
-			get; private set;
+			get
+			{
+				if (_center == null)
+					CalculateCenter();
+				return _center;
+			}
+
+			private set
+			{
+				_center = value;
+			}
 		}
 
+		private float[] _boundarycurve;
 		public float[] BoundaryCurve
 		{
-			get; private set;
+			get
+			{
+				if (_boundarycurve == null)
+					CalculateBoundary();
+				return _boundarycurve;
+			}
+
+			private set
+			{
+				_boundarycurve = value;
+			}
 		}
 
 		public Detection(Point[] points)
