@@ -434,13 +434,24 @@ namespace INFOIBV
 			Points = points;
 			Size = points.Count();
 
-			// Center = CalculateCenter();
+			Center = CalculateCenter();
 			// BoundaryCurve = CalculateBoundary();
 		}
 
 		private PointF CalculateCenter()
 		{
-			throw new NotImplementedException();
+            int length = Points.Count();
+            float totalX = 0.0f;
+            float totalY = 0.0f;
+
+            for(int i = 0; i < length; i++)
+            {
+                totalX += Points[i].X;
+                totalY += Points[i].Y;
+            }
+            PointF center = new PointF(totalX / length, totalY / length);
+            return center;
+			//throw new NotImplementedException();
 		}
 
 		private float[] CalculateBoundary()
