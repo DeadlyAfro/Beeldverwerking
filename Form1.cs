@@ -76,7 +76,7 @@ namespace INFOIBV
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
-            Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
+			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
 
 			// TODO: Extract objects using floodfill (requires new class to store objects? Could be used to split work and keep additional information, such as original location etc.)
 
@@ -372,26 +372,60 @@ namespace INFOIBV
 			progressBar.Value = progressBar.Minimum;
 			return output.ToArray();
 		}
-        private Detection[] FilterBySize(Detection[] input, int MinPixels)
-        {
-            List<Detection> objects = new List<Detection>();
-            foreach (Detection obj in input)
-                if (obj.size > MinPixels * MinPixels && obj.size < (Width / 2) * (Height / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
-                    objects.Add(obj);                                                           //And all objects with a surface larger than 1/4th of the image
-            Detection[] output = new Detection[objects.Count];
-            return output = objects.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
-        }
-    }
+
+		private Detection[] FilterBySize(Detection[] input, int MinPixels)
+		{
+			List<Detection> output = new List<Detection>();
+
+			foreach (Detection obj in input)
+				if (obj.Size > MinPixels * MinPixels && obj.Size < (Width / 2) * (Height / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
+					output.Add(obj);                            
+
+			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
+		}
+	}
 
 	class Detection
 	{
-		private Point[] point;
-        public int size;
-
-		public Detection(Point[] point)
+		public Point[] Points
 		{
-			this.point = point;
-            size = point.Count();
+			get; private set;
+		}
+
+		public int Size
+		{
+			get; private set;
+		}
+
+		public PointF Center
+		{
+			get; private set;
+		}
+
+		public float[] BoundaryCurve
+		{
+			get; private set;
+		}
+
+		public Detection(Point[] points)
+		{
+			Points = points;
+			Size = points.Count();
+
+			// Center = CalculateCenter();
+			// BoundaryCurve = CalculateBoundary();
+		}
+
+		private PointF CalculateCenter()
+		{
+			throw new NotImplementedException();
+		}
+
+		private float[] CalculateBoundary()
+		{
+			const int STEPS = 360;
+
+			throw new NotImplementedException();
 		}
 	}
 }
