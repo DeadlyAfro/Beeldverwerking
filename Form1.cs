@@ -294,7 +294,7 @@ namespace INFOIBV
                 {
                     int count = 0;
 
-                    if (input[x, y] == 1)
+                    if (input[x, y] == 1)                   // + shape erosion 3x3
                     {
                         if (input[x - 1, y] == 1)
                             count++;
@@ -331,7 +331,7 @@ namespace INFOIBV
                     if (input[x, y] == 0)
                         output[x, y] = 0;
                     else
-                    {
+                    {                                       // Square shape dilation 3x3
                         if (input[x - 1, y] == 0)
                             count++;
                         if (input[x + 1, y] == 0)
@@ -464,6 +464,41 @@ namespace INFOIBV
 
 			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
 		}
+
+        private Detection[] FindTargetObjects(Detection[] input, float[] curve , float threshold)
+        {
+            List<Detection> outputList = new List<Detection>();
+            foreach( Detection d in input)
+            {
+                if(CompareCurve(d.BoundaryCurve, curve , threshold))
+                {
+                    outputList.Add(d);
+                }
+            }
+            return outputList.ToArray();
+        }
+
+        private bool CompareCurve(float[] detection, float[] curve, float threshold)
+        {
+            float minSqauredDifferenceSum = float.MaxValue;     //Float to store the smallest difference, set to highest value so any value smaller will replace this
+
+            for (int o = 0; o < 360; o++)                       //Loop over all angles of rotation to compare to the predefined curve
+            {
+                float squaredDifferenceSum = 0.0f;
+                for (int i = o; i < 360 + o; i++)               //Use the angle of rotation as an offset
+                {
+                    int index = o;
+                    if (i > 360)
+                        o -= 360;                               //If i becomes larger then 360
+
+                    float difference = detection[o] - curve[o];
+                    squaredDifferenceSum += difference * difference;
+                }
+                if (squaredDifferenceSum < minSqauredDifferenceSum)
+                    minSqauredDifferenceSum = squaredDifferenceSum;
+            }
+            return false;
+        }
 	}
 
 	class Detection
