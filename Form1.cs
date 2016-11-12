@@ -70,7 +70,9 @@ namespace INFOIBV
 
 			float[,] edgeImage = DetectEdges(floatImage);
 
-			float[,] thresholdImage = ApplyThreshold(edgeImage, 5);
+			float[,] thresholdImage = ApplyThreshold(edgeImage, 10);
+
+            float[,] morphedImage = MorphologycalTransform(thresholdImage);
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
@@ -82,7 +84,7 @@ namespace INFOIBV
 
 			// TODO: Show detections on original image
 
-			float[,] normalizedImage = NormalizeFloats(thresholdImage);
+			float[,] normalizedImage = NormalizeFloats(morphedImage);
 			Image = ConvertToImage(normalizedImage);
 
 			//==========================================================================================
@@ -235,12 +237,10 @@ namespace INFOIBV
 					if (0 < x && x < Width - 1)
 					{
 						value += Math.Abs((-input[x - 1, y] + input[x + 1, y]) / 3f); // Horizontal (-1, 0, 1) kernel
-						value += Math.Abs((input[x - 1, y] - input[x + 1, y]) / 3f); // Horizontal (1, 0, -1) kernel
 					}
 					if (0 < y && y < Height - 1)
 					{
 						value += Math.Abs((-input[x, y - 1] + input[x, y + 1]) / 3f); // Vertical (-1, 0, 1) kernel
-						value += Math.Abs((input[x, y - 1] - input[x, y + 1]) / 3f); // Vertical (1, 0, -1) kernel
 					}
 
 					output[x, y] = value;
@@ -275,7 +275,96 @@ namespace INFOIBV
 			return output;
 		}
 
-		private Detection[] FloodFillExtraction(float[,] input)
+        private float[,] MorphologycalTransform(float[,] input)
+        {
+            //float[,] temp = Erosion(input, 3);
+            float[,] output = Dilation(input,4);
+            //output = Erosion(output, 2);       
+            
+            return output;
+        }
+
+        private float[,] Erosion(float[,] input, int strength)
+        {
+            float[,] output = new float[Width, Height];
+
+            for (int x = 1; x < Width - 1; x++)
+            {
+                for (int y = 1; y < Height - 1; y++)
+                {
+                    int count = 0;
+
+                    if (input[x, y] == 1)
+                    {
+                        if (input[x - 1, y] == 1)
+                            count++;
+                        if (input[x + 1, y] == 1)
+                            count++;
+                        if (input[x, y - 1] == 1)
+                            count++;
+                        if (input[x, y + 1] == 1)
+                            count++;
+
+                        if (count > strength)
+                        {
+                            output[x, y] = 1;
+                        }
+                        else output[x, y] = 0;
+                    }
+                    else output[x, y] = 0;
+
+                    
+                }
+            }
+                    return output;
+        }
+
+        private float[,] Dilation(float[,] input, int strength)
+        {
+            float[,] output = new float[Width, Height];
+
+            for (int x = 1; x < Width - 1; x++)
+            {
+                for (int y = 1; y < Height - 1; y++)
+                {
+                    int count = 0;
+                    if (input[x, y] == 0)
+                        output[x, y] = 0;
+                    else
+                    {
+                        if (input[x - 1, y] == 0)
+                            count++;
+                        if (input[x + 1, y] == 0)
+                            count++;
+                        if (input[x, y - 1] == 0)
+                            count++;
+                        if (input[x, y + 1] == 0)
+                            count++;
+                        if (input[x - 1, y-1] == 0)
+                            count++;
+                        if (input[x + 1, y +1] == 0)
+                            count++;
+                        if (input[x-1, y - 1] == 0)
+                            count++;
+                        if (input[x+1, y + 1] == 0)
+                            count++;
+
+                        if (count > strength)
+                        {
+                            output[x, y] = 0;
+                        }
+                        else output[x, y] = 1;
+                    }
+
+                    
+                }
+            }
+
+            return output;
+        }
+
+
+        private Detection[] FloodFillExtraction(float[,] input)
 		{
 			// STAGE 0: Copy the input to an array that can be manipulated
 			int[,] flood = new int[Width, Height];
