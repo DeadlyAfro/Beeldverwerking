@@ -470,7 +470,7 @@ namespace INFOIBV
             List<Detection> outputList = new List<Detection>();
             foreach( Detection d in input)
             {
-                if(CompareCurve(d.BoundaryCurve, curve , threshold))
+                if(CompareCurve(d.BoundaryCurve, curve) <= threshold)
                 {
                     outputList.Add(d);
                 }
@@ -478,26 +478,26 @@ namespace INFOIBV
             return outputList.ToArray();
         }
 
-        private bool CompareCurve(float[] detection, float[] curve, float threshold)
+        private float CompareCurve(float[] detection, float[] curve)
         {
             float minSqauredDifferenceSum = float.MaxValue;     //Float to store the smallest difference, set to highest value so any value smaller will replace this
 
-            for (int o = 0; o < 360; o++)                       //Loop over all angles of rotation to compare to the predefined curve
+            for (int o = 0; o < 360; o++)       //Loop over all angles of rotation to compare to the predefined curve
             {
                 float squaredDifferenceSum = 0.0f;
-                for (int i = o; i < 360 + o; i++)               //Use the angle of rotation as an offset
+                for (int i = o; i < 360 + o; i++)    //Use the angle of rotation as an offset when looping through the arrays
                 {
                     int index = o;
                     if (i > 360)
-                        o -= 360;                               //If i becomes larger then 360
+                        o -= 360;    //If i becomes larger then 360
 
                     float difference = detection[o] - curve[o];
-                    squaredDifferenceSum += difference * difference;
+                    squaredDifferenceSum += difference * difference; //Add the squared difference to the sum
                 }
-                if (squaredDifferenceSum < minSqauredDifferenceSum)
+                if (squaredDifferenceSum < minSqauredDifferenceSum) //Replace the minimal squared difference when necessary
                     minSqauredDifferenceSum = squaredDifferenceSum;
             }
-            return false;
+            return minSqauredDifferenceSum;
         }
 	}
 
