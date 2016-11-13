@@ -72,7 +72,7 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 10);
 
-            float[,] morphedImage = MorphologycalTransform(thresholdImage);
+            float[,] morphedImage = MorphologicalTransform(thresholdImage);
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
@@ -276,7 +276,7 @@ namespace INFOIBV
 			return output;
 		}
 
-        private float[,] MorphologycalTransform(float[,] input)
+        private float[,] MorphologicalTransform(float[,] input)
         {
             //float[,] temp = Erosion(input, 3);
             float[,] output = Dilation(input,4);
