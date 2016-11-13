@@ -65,8 +65,8 @@ namespace INFOIBV
 			HEIGHT = InputImage.Size.Height;
 
 			const int THRESHOLD = 10;
-			const int MINIMUM_DETECTION_PIXELS = 1024;
-			const int MAXIMUM_BOUNDARY_ERROR = 5;
+			const int MINIMUM_DETECTION_PIXELS = 128;
+			const int MAXIMUM_BOUNDARY_ERROR = 25;
 
 			Color[,] grayscaleImage = ConvertToGrayscale(Image);
 
@@ -91,8 +91,8 @@ namespace INFOIBV
 
 			Image = DisplayFoundObjects(targetObjects);
 
-			// float[,] normalizedImage = NormalizeFloats(referenceThreshold);
-			// Image = ConvertToImage(normalizedImage);
+			//float[,] normalizedImage = NormalizeFloatArray(thresholdImage);
+			//Image = ConvertToImage(normalizedImage);
 
 			// ==========================================================================================
 
@@ -276,94 +276,6 @@ namespace INFOIBV
 			return output;
 		}
 
-		private float[,] MorphologicalTransform(float[,] input)
-		{
-			// float[,] temp = Erosion(input, 3);
-			float[,] output = Dilation(input, 4);
-			// output = Erosion(output, 2);       
-
-			return output;
-		}
-
-		private float[,] Erosion(float[,] input, int strength)
-		{
-			float[,] output = new float[WIDTH, HEIGHT];
-
-			for (int x = 1; x < WIDTH - 1; x++)
-			{
-				for (int y = 1; y < HEIGHT - 1; y++)
-				{
-					int count = 0;
-
-					if (input[x, y] == 1)     // + shape erosion 3x3
-					{
-						if (input[x - 1, y] == 1)
-							count++;
-						if (input[x + 1, y] == 1)
-							count++;
-						if (input[x, y - 1] == 1)
-							count++;
-						if (input[x, y + 1] == 1)
-							count++;
-
-						if (count > strength)
-						{
-							output[x, y] = 1;
-						}
-						else output[x, y] = 0;
-					}
-					else output[x, y] = 0;
-
-
-				}
-			}
-			return output;
-		}
-
-		private float[,] Dilation(float[,] input, int strength)
-		{
-			float[,] output = new float[WIDTH, HEIGHT];
-
-			for (int x = 1; x < WIDTH - 1; x++)
-			{
-				for (int y = 1; y < HEIGHT - 1; y++)
-				{
-					int count = 0;
-					if (input[x, y] == 0)
-						output[x, y] = 0;
-					else
-					{                         // Square shape dilation 3x3
-						if (input[x - 1, y] == 0)
-							count++;
-						if (input[x + 1, y] == 0)
-							count++;
-						if (input[x, y - 1] == 0)
-							count++;
-						if (input[x, y + 1] == 0)
-							count++;
-						if (input[x - 1, y - 1] == 0)
-							count++;
-						if (input[x + 1, y + 1] == 0)
-							count++;
-						if (input[x - 1, y - 1] == 0)
-							count++;
-						if (input[x + 1, y + 1] == 0)
-							count++;
-
-						if (count > strength)
-						{
-							output[x, y] = 0;
-						}
-						else output[x, y] = 1;
-					}
-
-
-				}
-			}
-
-			return output;
-		}
-
 		private Detection[] FloodFillExtraction(float[,] input)
 		{
 			progressBar.Value = progressBar.Minimum;
@@ -506,14 +418,14 @@ namespace INFOIBV
 			{
 				float minSquaredDifferenceSum = float.MaxValue; // Float to store the smallest difference, set to highest value so any value smaller will replace this
 
-				for (int offset = 0; offset < Detection.SCAN_RESOLUTION; offset++) // Loop over all rotation offsets
+				for (int offset = 0; offset < Detection.ANGLE_RESOLUTION; offset++) // Loop over all rotation offsets
 				{
 					float squaredDifferenceSum = 0.0f;
 
-					for (int i = offset; i < Detection.SCAN_RESOLUTION + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
+					for (int i = offset; i < Detection.ANGLE_RESOLUTION + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
 					{
 						int originalIndex = i - offset;
-						int offsetIndex = i % Detection.SCAN_RESOLUTION;
+						int offsetIndex = i % Detection.ANGLE_RESOLUTION;
 
 						float difference = d.BoundaryCurve[offsetIndex] - referenceCurve[originalIndex];
 						squaredDifferenceSum += difference * difference; // Add the squared difference to the sum
@@ -570,8 +482,9 @@ namespace INFOIBV
 
 	class Detection
 	{
-		public const int SCAN_RESOLUTION = 360;
-		public const double SCAN_INTERVAL = 360.0 / SCAN_RESOLUTION;
+		public const int ANGLE_RESOLUTION = 720;
+		public const double SCAN_INTERVAL = 360.0 / ANGLE_RESOLUTION;
+		public const int STEPS_PER_PIXEL = 8;
 
 		// Only produce GET functions to outside objects
 		public int Left
@@ -657,15 +570,15 @@ namespace INFOIBV
 			foreach (Point p in Points) // Set all pixels of the object to True
 				workspace[p.X - Left, p.Y - Top] = true;
 
-			BoundaryCurve = new float[SCAN_RESOLUTION]; // Initialize an array to store the results
+			BoundaryCurve = new float[ANGLE_RESOLUTION]; // Initialize an array to store the results
 			Vector CenterVec = new Vector(Center.X - Left, Center.Y - Top); // Calculate the center of the workspace
 
-			for (int i = 0; i < SCAN_RESOLUTION; i++) // Loop over the requested number of directions
+			for (int i = 0; i < ANGLE_RESOLUTION; i++) // Loop over the requested number of directions
 			{
 				// Construct a vector to walk over the workspace with
 				double degrees = i * SCAN_INTERVAL;
 				double radians = degrees * Math.PI / 180;
-				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / 2;
+				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / STEPS_PER_PIXEL;
 				Vector pos = CenterVec; // Set the starting position of the walker
 
 				while (pos.X > 0 && pos.X < Width - 1 && pos.Y > 0 && pos.Y < Height - 1) // Keep walking until we run outside the workspace
@@ -687,11 +600,11 @@ namespace INFOIBV
 		{
 			float value = 0;
 
-			for (int i = 0; i < SCAN_RESOLUTION; i++) // Find highest distance to boundary
+			for (int i = 0; i < ANGLE_RESOLUTION; i++) // Find highest distance to boundary
 				value = Math.Max(value, BoundaryCurve[i]); // All distances are 0 or higher
 
 			if (value > 0) // Prevent divide-by-zero
-				for (int i = 0; i < SCAN_RESOLUTION; i++)
+				for (int i = 0; i < ANGLE_RESOLUTION; i++)
 					BoundaryCurve[i] /= value; // Normalize
 		}
 	}
