@@ -134,7 +134,7 @@ namespace INFOIBV
 					MIN = Math.Min(MIN, value);
 					MAX = Math.Max(MAX, value);
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -156,7 +156,7 @@ namespace INFOIBV
 
 					output[x, y] = value;
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -178,7 +178,7 @@ namespace INFOIBV
 
 					output[x, y] = Color.FromArgb(grayValue, grayValue, grayValue); // Set as gray
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -366,11 +366,17 @@ namespace INFOIBV
 
 		private Detection[] FloodFillExtraction(float[,] input)
 		{
+			progressBar.Value = progressBar.Minimum;
+
 			// STAGE 0: Copy the input to an array that can be manipulated
 			int[,] flood = new int[WIDTH, HEIGHT];
 			for (int x = 0; x < WIDTH; x++)
 				for (int y = 0; y < HEIGHT; y++)
+				{
 					flood[x, y] = (int)input[x, y]; // Copy the input to an array we can process
+
+					progressBar.PerformStep();
+				}
 
 			progressBar.Value = progressBar.Minimum;
 
@@ -410,7 +416,7 @@ namespace INFOIBV
 						ObjectIdentifier++; // Increase the counter for the next detection
 					}
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -435,7 +441,7 @@ namespace INFOIBV
 						extract[Identifier].Add(new Point(x, y)); // Add point to the correct object
 					}
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -472,6 +478,7 @@ namespace INFOIBV
 		private float[,] ImportReferenceImage()
 		{
 			float[,] output = new float[WIDTH, HEIGHT];
+			progressBar.Value = progressBar.Minimum;
 
 			Bitmap referenceImage = new Bitmap(Application.StartupPath + "\\ReferenceImage.png");
 
@@ -482,14 +489,18 @@ namespace INFOIBV
 						output[x, y] = 255;
 					else
 						output[x, y] = 0;
+
+					progressBar.PerformStep();
 				}
 
+			progressBar.Value = progressBar.Minimum;
 			return output;
 		}
 
 		private Detection[] FindTargetObjects(Detection[] input, float[] referenceCurve, float threshold)
 		{
 			List<Detection> outputList = new List<Detection>();
+			progressBar.Value = progressBar.Minimum;
 
 			foreach (Detection d in input) // Loop over all detected objects
 			{
@@ -513,8 +524,11 @@ namespace INFOIBV
 
 				if (minSquaredDifferenceSum <= threshold) // Check if the lowest error is within threshold
 					outputList.Add(d);
+
+				progressBar.PerformStep();
 			}
 
+			progressBar.Value = progressBar.Minimum;
 			return outputList.ToArray();
 		}
 
@@ -523,10 +537,19 @@ namespace INFOIBV
 			const int INCREMENT = 30; // Variable that determines the increase in color for each new object
 
 			Color[,] output = new Color[WIDTH, HEIGHT];
+			progressBar.Value = progressBar.Minimum;
 
 			for (int x = 0; x < WIDTH; x++) // Setup a new black image
 				for (int y = 0; y < HEIGHT; y++)
+				{
 					output[x, y] = Color.Black;
+
+					progressBar.PerformStep();
+				}
+
+			progressBar.Value = progressBar.Minimum;
+			int temp = progressBar.Maximum;
+			progressBar.Maximum = foundObjects.Length;
 
 			int grayValue = INCREMENT; // Initalize a color
 			foreach (Detection d in foundObjects)
@@ -535,8 +558,12 @@ namespace INFOIBV
 					output[p.X, p.Y] = Color.FromArgb(grayValue, grayValue, grayValue);
 
 				grayValue = (grayValue + INCREMENT) % 256; // Wrap the gray value to keep within 256 range
+
+				progressBar.PerformStep();
 			}
 
+			progressBar.Value = progressBar.Minimum;
+			progressBar.Maximum = temp;
 			return output;
 		}
 	}
