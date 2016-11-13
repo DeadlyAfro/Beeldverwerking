@@ -78,13 +78,16 @@ namespace INFOIBV
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
 
-			Detection referenceObject = FloodFillExtraction(ApplyThreshold(DetectEdges(ImportReferenceImage()), 10))[1];
+			float[,] referenceImage = ImportReferenceImage();
+			float[,] referenceEdges = DetectEdges(referenceImage);
+			float[,] referenceThreshold = ApplyThreshold(referenceEdges, 10);
+			Detection referenceObject = FloodFillExtraction(referenceThreshold)[1];
 
 			Detection[] targetObjects = FindTargetObjects(filteredObjects, referenceObject.BoundaryCurve, 5);
 
 			Image = DisplayFoundObjects(targetObjects);
 
-			//float[,] normalizedImage = NormalizeFloats(thresholdImage);
+			//float[,] normalizedImage = NormalizeFloats(referenceThreshold);
 			//Image = ConvertToImage(normalizedImage);
 
 			//==========================================================================================
@@ -391,13 +394,19 @@ namespace INFOIBV
 							flood[p.X, p.Y] = ObjectIdentifier; // Make sure current point is set as object
 
 							for (int i = -1; i <= 1; i++) // In a 3x3 square around the current pixel
+							{
 								for (int j = -1; j <= 1; j++)
-									if (p.X + i > 0 && p.X + i < WIDTH && p.Y + j > 0 && p.Y + j < HEIGHT) // Check if we are within boundaries
-										if (flood[p.X + i, p.Y + j] == 0) // Check if the pixel belongs to the object
-										{
-											work.Enqueue(new Point(p.X + i, p.Y + j)); // Add pixel to queue
-											flood[p.X + i, p.Y + j] = ObjectIdentifier; // Set pixel as found
-										}
+								{
+									if (p.X + i < 0 || p.X + i == WIDTH || p.Y + j < 0 || p.Y + j == HEIGHT) // Check if we are within boundaries
+										continue;
+
+									if (flood[p.X + i, p.Y + j] == 0) // Check if the pixel belongs to the object
+									{
+										work.Enqueue(new Point(p.X + i, p.Y + j)); // Add pixel to queue
+										flood[p.X + i, p.Y + j] = ObjectIdentifier; // Set pixel as found
+									}
+								}
+							}
 						}
 
 						ObjectIdentifier++; // Increase the counter for the next detection
