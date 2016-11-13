@@ -23,24 +23,24 @@ namespace INFOIBV
 
 		private void LoadImageButton_Click(object sender, EventArgs e)
 		{
-			if (openImageDialog.ShowDialog() == DialogResult.OK)             // Open File Dialog
+			if (openImageDialog.ShowDialog() == DialogResult.OK) // Open File Dialog
 			{
-				string file = openImageDialog.FileName;                     // Get the file name
-				imageFileName.Text = file;                                  // Show file name
-				if (InputImage != null) InputImage.Dispose();               // Reset image
-				InputImage = new Bitmap(file);                              // Create new Bitmap from file
+				string file = openImageDialog.FileName;       // Get the file name
+				imageFileName.Text = file;                    // Show file name
+				if (InputImage != null) InputImage.Dispose(); // Reset image
+				InputImage = new Bitmap(file);                // Create new Bitmap from file
 				if (InputImage.Size.Height <= 0 || InputImage.Size.Width <= 0 ||
 					InputImage.Size.Height > 512 || InputImage.Size.Width > 512) // Dimension check
 					MessageBox.Show("Error in image dimensions (have to be > 0 and <= 512)");
 				else
-					pictureBox1.Image = (Image)InputImage;                 // Display input image
+					pictureBox1.Image = (Image)InputImage;   // Display input image
 			}
 		}
 
 		private void applyButton_Click(object sender, EventArgs e)
 		{
-			if (InputImage == null) return;                                 // Get out if no input image
-			if (OutputImage != null) OutputImage.Dispose();                 // Reset output image
+			if (InputImage == null) return;                   // Get out if no input image
+			if (OutputImage != null) OutputImage.Dispose();   // Reset output image
 			OutputImage = new Bitmap(InputImage.Size.Width, InputImage.Size.Height); // Create new output image
 			Color[,] Image = new Color[InputImage.Size.Width, InputImage.Size.Height]; // Create array to speed-up operations (Bitmap functions are very slow)
 
@@ -56,13 +56,17 @@ namespace INFOIBV
 			{
 				for (int y = 0; y < InputImage.Size.Height; y++)
 				{
-					Image[x, y] = InputImage.GetPixel(x, y);                // Set pixel color in array at (x,y)
+					Image[x, y] = InputImage.GetPixel(x, y);  // Set pixel color in array at (x,y)
 				}
 			}
 
-			//==========================================================================================
+			// ==========================================================================================
 			WIDTH = InputImage.Size.Width;
 			HEIGHT = InputImage.Size.Height;
+
+			const int THRESHOLD = 10;
+			const int MINIMUM_DETECTION_PIXELS = 1024;
+			const int MAXIMUM_BOUNDARY_ERROR = 5;
 
 			Color[,] grayscaleImage = ConvertToGrayscale(Image);
 
@@ -70,67 +74,65 @@ namespace INFOIBV
 
 			float[,] edgeImage = DetectEdges(floatImage);
 
-			float[,] thresholdImage = ApplyThreshold(edgeImage, 10);
+			float[,] thresholdImage = ApplyThreshold(edgeImage, THRESHOLD);
 
 			// float[,] morphedImage = MorphologicalTransform(thresholdImage);
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
-			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
+			Detection[] filteredObjects = FilterBySize(detectedObjects, MINIMUM_DETECTION_PIXELS);
 
 			float[,] referenceImage = ImportReferenceImage();
 			float[,] referenceEdges = DetectEdges(referenceImage);
-			float[,] referenceThreshold = ApplyThreshold(referenceEdges, 10);
+			float[,] referenceThreshold = ApplyThreshold(referenceEdges, THRESHOLD);
 			Detection referenceObject = FloodFillExtraction(referenceThreshold)[1];
 
-			Detection[] targetObjects = FindTargetObjects(filteredObjects, referenceObject.BoundaryCurve, 5);
+			Detection[] targetObjects = FindTargetObjects(filteredObjects, referenceObject.BoundaryCurve, MAXIMUM_BOUNDARY_ERROR);
 
 			Image = DisplayFoundObjects(targetObjects);
 
-			//float[,] normalizedImage = NormalizeFloats(referenceThreshold);
-			//Image = ConvertToImage(normalizedImage);
+			// float[,] normalizedImage = NormalizeFloats(referenceThreshold);
+			// Image = ConvertToImage(normalizedImage);
 
-			//==========================================================================================
+			// ==========================================================================================
 
 			// Copy array to output Bitmap
 			for (int x = 0; x < WIDTH; x++)
 			{
 				for (int y = 0; y < HEIGHT; y++)
 				{
-					OutputImage.SetPixel(x, y, Image[x, y]);               // Set the pixel color at coordinate (x,y)
+					OutputImage.SetPixel(x, y, Image[x, y]); // Set the pixel color at coordinate (x,y)
 				}
 			}
 
-			pictureBox2.Image = (Image)OutputImage;                         // Display output image
-			progressBar.Visible = false;                                    // Hide progress bar
+			pictureBox2.Image = (Image)OutputImage;           // Display output image
+			progressBar.Visible = false;                      // Hide progress bar
 		}
 
 		private void saveButton_Click(object sender, EventArgs e)
 		{
-			if (OutputImage == null) return;                                // Get out if no output image
+			if (OutputImage == null) return;                  // Get out if no output image
 			if (saveImageDialog.ShowDialog() == DialogResult.OK)
-				OutputImage.Save(saveImageDialog.FileName);                 // Save the output image
+				OutputImage.Save(saveImageDialog.FileName);   // Save the output image
 		}
 
-		// ===== PROCESSING FUNCTIONS =====
+		// ===== DEBUG FUNCTIONS =====
 
-		private float[,] NormalizeFloats(float[,] input)
+		private float[,] NormalizeFloatArray(float[,] input) // Output: [0,1] - ONLY USED FOR DEBUG DRAWINGS
 		{
 			float[,] output = new float[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			float MIN = float.MaxValue, MAX = float.MinValue;
+			float MIN = float.MaxValue, MAX = float.MinValue; // Initialize 
 
-			for (int x = 0; x < WIDTH; x++)
+			for (int x = 0; x < WIDTH; x++) // Iterate once to collect all necessary variables for normalizing
 			{
 				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y];
 
-					if (value < MIN)
-						MIN = value;
-					if (value > MAX)
-						MAX = value;
+					MIN = Math.Min(MIN, value);
+					MAX = Math.Max(MAX, value);
 
 					progressBar.PerformStep(); // Increment progress bar
 				}
@@ -138,7 +140,7 @@ namespace INFOIBV
 
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < WIDTH; x++)
+			for (int x = 0; x < WIDTH; x++) // Loop again to remap all values
 			{
 				for (int y = 0; y < HEIGHT; y++)
 				{
@@ -147,9 +149,9 @@ namespace INFOIBV
 					if (MAX - MIN == 0) // Catch devide-by-zero
 						throw new Exception("SHIT");
 
-					value = (value - MIN) / (MAX - MIN);
+					value = (value - MIN) / (MAX - MIN); // Remap values to [0,1]
 
-					if (value < 0 || value > 1 || float.IsNaN(value)) // Still something went wrong
+					if (value < 0 || value > 1 || float.IsNaN(value)) // Just in case
 						throw new Exception("ALSO SHIT");
 
 					output[x, y] = value;
@@ -162,7 +164,7 @@ namespace INFOIBV
 			return output;
 		}
 
-		private Color[,] ConvertToImage(float[,] input)
+		private Color[,] ConvertToImage(float[,] input) // Expects [0,1] - ONLY USED FOR DEBUG DRAWINGS
 		{
 			Color[,] output = new Color[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
@@ -172,9 +174,9 @@ namespace INFOIBV
 				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y];
-					int grayValue = (int)Math.Round(value * 255);
+					int grayValue = (int)Math.Round(value * 255); // Stretch to byte
 
-					output[x, y] = Color.FromArgb(grayValue, grayValue, grayValue);
+					output[x, y] = Color.FromArgb(grayValue, grayValue, grayValue); // Set as gray
 
 					progressBar.PerformStep(); // Increment progress bar
 				}
@@ -183,6 +185,8 @@ namespace INFOIBV
 			progressBar.Value = progressBar.Minimum;
 			return output;
 		}
+
+		// ===== PROCESSING FUNCTIONS =====
 
 		private Color[,] ConvertToGrayscale(Color[,] input)
 		{
@@ -194,9 +198,10 @@ namespace INFOIBV
 				for (int y = 0; y < HEIGHT; y++)
 				{
 					Color inputColor = input[x, y];
+
 					int grayscale = (int)(inputColor.R * 0.3 + inputColor.G * 0.59 + inputColor.B * 0.11); // Calculate grayscale value
-					Color outputColor = Color.FromArgb(grayscale, grayscale, grayscale);
-					output[x, y] = outputColor;
+
+					output[x, y] = Color.FromArgb(grayscale, grayscale, grayscale); // Set as output
 
 					progressBar.PerformStep();
 				}
@@ -212,15 +217,12 @@ namespace INFOIBV
 			progressBar.Value = progressBar.Minimum;
 
 			for (int x = 0; x < WIDTH; x++)
-			{
 				for (int y = 0; y < HEIGHT; y++)
 				{
-					float value = input[x, y].R; // Calculate grayscale value
-					output[x, y] = value; // Save to output
+					output[x, y] = input[x, y].R; // Assuming grayscaling has been applied, all channels should contain the same gray value
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
-			}
 
 			progressBar.Value = progressBar.Minimum;
 			return output;
@@ -238,17 +240,13 @@ namespace INFOIBV
 					float value = 0;
 
 					if (0 < x && x < WIDTH - 1)
-					{
-						value += Math.Abs((-input[x - 1, y] + input[x + 1, y]) / 3f); // Horizontal (-1, 0, 1) kernel
-					}
+						value += Math.Abs((-input[x - 1, y] + input[x + 1, y]) / 3f); // Add horizontal (-1, 0, 1) kernel as absolute value
 					if (0 < y && y < HEIGHT - 1)
-					{
-						value += Math.Abs((-input[x, y - 1] + input[x, y + 1]) / 3f); // Vertical (-1, 0, 1) kernel
-					}
+						value += Math.Abs((-input[x, y - 1] + input[x, y + 1]) / 3f); // Add vertical (-1, 0, 1) kernel as absolute value
 
 					output[x, y] = value;
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -270,7 +268,7 @@ namespace INFOIBV
 					else
 						output[x, y] = 0;
 
-					progressBar.PerformStep(); // Increment progress bar
+					progressBar.PerformStep();
 				}
 			}
 
@@ -280,9 +278,9 @@ namespace INFOIBV
 
 		private float[,] MorphologicalTransform(float[,] input)
 		{
-			//float[,] temp = Erosion(input, 3);
+			// float[,] temp = Erosion(input, 3);
 			float[,] output = Dilation(input, 4);
-			//output = Erosion(output, 2);       
+			// output = Erosion(output, 2);       
 
 			return output;
 		}
@@ -297,7 +295,7 @@ namespace INFOIBV
 				{
 					int count = 0;
 
-					if (input[x, y] == 1)                   // + shape erosion 3x3
+					if (input[x, y] == 1)     // + shape erosion 3x3
 					{
 						if (input[x - 1, y] == 1)
 							count++;
@@ -334,7 +332,7 @@ namespace INFOIBV
 					if (input[x, y] == 0)
 						output[x, y] = 0;
 					else
-					{                                       // Square shape dilation 3x3
+					{                         // Square shape dilation 3x3
 						if (input[x - 1, y] == 0)
 							count++;
 						if (input[x + 1, y] == 0)
@@ -441,24 +439,34 @@ namespace INFOIBV
 				}
 			}
 
+			progressBar.Value = progressBar.Minimum;
+
 			// STAGE 3: Reconstruct a detected object from its pixels.
+			int temp = progressBar.Maximum;
+			progressBar.Maximum = extract.Count;
+
 			Detection[] output = new Detection[extract.Count];
 			for (int i = 0; i < extract.Count; i++)
+			{
 				output[i] = new Detection(extract[i].ToArray()); // Create Detection objects with list of pixels
 
+				progressBar.PerformStep();
+			}
+
+			progressBar.Maximum = temp;
 			progressBar.Value = progressBar.Minimum;
 			return output.ToArray();
 		}
 
-		private Detection[] FilterBySize(Detection[] input, int MinPixels)
+		private Detection[] FilterBySize(Detection[] input, int minimumPixelCount)
 		{
 			List<Detection> output = new List<Detection>();
 
 			foreach (Detection obj in input)
-				if (obj.Size > MinPixels * MinPixels && obj.Size < (WIDTH / 2) * (HEIGHT / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
+				if (obj.Size > minimumPixelCount) // Filter out all objects with a surface smaller than the minimal pixelsize squared
 					output.Add(obj);
 
-			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
+			return output.ToArray();
 		}
 
 		private float[,] ImportReferenceImage()
@@ -466,10 +474,11 @@ namespace INFOIBV
 			float[,] output = new float[WIDTH, HEIGHT];
 
 			Bitmap referenceImage = new Bitmap(Application.StartupPath + "\\ReferenceImage.png");
+
 			for (int x = 0; x < WIDTH; x++)
 				for (int y = 0; y < HEIGHT; y++)
 				{
-					if (referenceImage.GetPixel(x, y).R > 50)
+					if (referenceImage.GetPixel(x, y).R > 128) // Just to be sure
 						output[x, y] = 255;
 					else
 						output[x, y] = 0;
@@ -478,58 +487,54 @@ namespace INFOIBV
 			return output;
 		}
 
-		private Detection[] FindTargetObjects(Detection[] input, float[] curve, float threshold)
+		private Detection[] FindTargetObjects(Detection[] input, float[] referenceCurve, float threshold)
 		{
 			List<Detection> outputList = new List<Detection>();
-			foreach (Detection d in input)
+
+			foreach (Detection d in input) // Loop over all detected objects
 			{
-				if (CompareCurve(d.BoundaryCurve, curve) <= threshold)
+				float minSquaredDifferenceSum = float.MaxValue; // Float to store the smallest difference, set to highest value so any value smaller will replace this
+
+				for (int offset = 0; offset < Detection.SCAN_RESOLUTION; offset++) // Loop over all rotation offsets
 				{
+					float squaredDifferenceSum = 0.0f;
+
+					for (int i = offset; i < Detection.SCAN_RESOLUTION + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
+					{
+						int originalIndex = i - offset;
+						int offsetIndex = i % Detection.SCAN_RESOLUTION;
+
+						float difference = d.BoundaryCurve[offsetIndex] - referenceCurve[originalIndex];
+						squaredDifferenceSum += difference * difference; // Add the squared difference to the sum
+					}
+
+					minSquaredDifferenceSum = Math.Min(minSquaredDifferenceSum, squaredDifferenceSum); // Only remember the lowest error
+				}
+
+				if (minSquaredDifferenceSum <= threshold) // Check if the lowest error is within threshold
 					outputList.Add(d);
-				}
 			}
+
 			return outputList.ToArray();
-		}
-
-		private float CompareCurve(float[] detectedCurve, float[] referenceCurve)
-		{
-			float minSquaredDifferenceSum = float.MaxValue; // Float to store the smallest difference, set to highest value so any value smaller will replace this
-
-			for (int offset = 0; offset < Detection.SCAN_RESOLUTION; offset++) // Loop over all rotation offsets
-			{
-				float squaredDifferenceSum = 0.0f;
-
-				for (int i = offset; i < Detection.SCAN_RESOLUTION + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
-				{
-					int originalIndex = i - offset;
-					int offsetIndex = i % Detection.SCAN_RESOLUTION;
-
-					float difference = detectedCurve[offsetIndex] - referenceCurve[originalIndex];
-					squaredDifferenceSum += difference * difference; //Add the squared difference to the sum
-				}
-
-				minSquaredDifferenceSum = Math.Min(minSquaredDifferenceSum, squaredDifferenceSum);
-			}
-
-			return minSquaredDifferenceSum;
 		}
 
 		private Color[,] DisplayFoundObjects(Detection[] foundObjects)
 		{
+			const int INCREMENT = 30; // Variable that determines the increase in color for each new object
+
 			Color[,] output = new Color[WIDTH, HEIGHT];
 
-			for (int x = 0; x < WIDTH; x++)
+			for (int x = 0; x < WIDTH; x++) // Setup a new black image
 				for (int y = 0; y < HEIGHT; y++)
 					output[x, y] = Color.Black;
 
-			const int INCREMENT = 30;
-			int i = INCREMENT;
+			int grayValue = INCREMENT; // Initalize a color
 			foreach (Detection d in foundObjects)
 			{
-				foreach (Point p in d.Points)
-					output[p.X, p.Y] = Color.FromArgb(i, i, i);
+				foreach (Point p in d.Points) // Loop over all pixels of the detected object
+					output[p.X, p.Y] = Color.FromArgb(grayValue, grayValue, grayValue);
 
-				i = (i + INCREMENT) % 256;
+				grayValue = (grayValue + INCREMENT) % 256; // Wrap the gray value to keep within 256 range
 			}
 
 			return output;
@@ -541,6 +546,7 @@ namespace INFOIBV
 		public const int SCAN_RESOLUTION = 360;
 		public const double SCAN_INTERVAL = 360.0 / SCAN_RESOLUTION;
 
+		// Only produce GET functions to outside objects
 		public int Left
 		{
 			get; private set;
@@ -594,14 +600,10 @@ namespace INFOIBV
 
 			foreach (Point p in Points)
 			{
-				if (p.X < Left)
-					Left = p.X;
-				if (p.X > Right)
-					Right = p.X;
-				if (p.Y < Top)
-					Top = p.Y;
-				if (p.Y > Bottom)
-					Bottom = p.Y;
+				Left = Math.Min(Left, p.X);
+				Right = Math.Max(Right, p.X);
+				Top = Math.Min(Top, p.Y);
+				Bottom = Math.Max(Bottom, p.Y);
 			}
 		}
 
@@ -624,7 +626,8 @@ namespace INFOIBV
 			// Create a temporary bool[,] representation of the object
 			int Width = Right - Left + 1, Height = Bottom - Top + 1;
 			bool[,] workspace = new bool[Width, Height];
-			foreach (Point p in Points)
+
+			foreach (Point p in Points) // Set all pixels of the object to True
 				workspace[p.X - Left, p.Y - Top] = true;
 
 			BoundaryCurve = new float[SCAN_RESOLUTION]; // Initialize an array to store the results
@@ -657,12 +660,12 @@ namespace INFOIBV
 		{
 			float value = 0;
 
-			for (int i = 0; i < SCAN_RESOLUTION; i++)
-				value = Math.Max(value, BoundaryCurve[i]);
+			for (int i = 0; i < SCAN_RESOLUTION; i++) // Find highest distance to boundary
+				value = Math.Max(value, BoundaryCurve[i]); // All distances are 0 or higher
 
-			if (value > 0)
+			if (value > 0) // Prevent divide-by-zero
 				for (int i = 0; i < SCAN_RESOLUTION; i++)
-					BoundaryCurve[i] /= value;
+					BoundaryCurve[i] /= value; // Normalize
 		}
 	}
 }
