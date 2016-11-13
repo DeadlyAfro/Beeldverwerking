@@ -72,23 +72,28 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 10);
 
-            // float[,] morphedImage = MorphologicalTransform(thresholdImage);
+			// float[,] morphedImage = MorphologicalTransform(thresholdImage);
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
-			
+
 			foreach (Detection d in filteredObjects)
+			{
+				d.CalculateBoundary();
 				d.NormalizeBoundary();
+			}
 
-			float[] referenceBoundary = FloodFillExtraction(ImportReferenceImage())[1].BoundaryCurve;
-			
-			// TODO: Compare curve with reference (which needs to be constructed)
+			Detection referenceObject = FloodFillExtraction(ApplyThreshold(DetectEdges(ImportReferenceImage()), 10))[1];
+			referenceObject.CalculateBoundary();
+			referenceObject.NormalizeBoundary();
 
-			// TODO: Show detections on original image
+			Detection[] targetObjects = FindTargetObjects(filteredObjects, referenceObject.BoundaryCurve, 5);
 
-			float[,] normalizedImage = NormalizeFloats(morphedImage);
-			Image = ConvertToImage(normalizedImage);
+			Image = DisplayFoundObjects(targetObjects);
+
+			//float[,] normalizedImage = NormalizeFloats(thresholdImage);
+			//Image = ConvertToImage(normalizedImage);
 
 			//==========================================================================================
 
@@ -278,96 +283,96 @@ namespace INFOIBV
 			return output;
 		}
 
-        private float[,] MorphologicalTransform(float[,] input)
-        {
-            //float[,] temp = Erosion(input, 3);
-            float[,] output = Dilation(input,4);
-            //output = Erosion(output, 2);       
-            
-            return output;
-        }
+		private float[,] MorphologicalTransform(float[,] input)
+		{
+			//float[,] temp = Erosion(input, 3);
+			float[,] output = Dilation(input, 4);
+			//output = Erosion(output, 2);       
 
-        private float[,] Erosion(float[,] input, int strength)
-        {
-            float[,] output = new float[Width, Height];
+			return output;
+		}
 
-            for (int x = 1; x < Width - 1; x++)
-            {
-                for (int y = 1; y < Height - 1; y++)
-                {
-                    int count = 0;
+		private float[,] Erosion(float[,] input, int strength)
+		{
+			float[,] output = new float[Width, Height];
 
-                    if (input[x, y] == 1)                   // + shape erosion 3x3
-                    {
-                        if (input[x - 1, y] == 1)
-                            count++;
-                        if (input[x + 1, y] == 1)
-                            count++;
-                        if (input[x, y - 1] == 1)
-                            count++;
-                        if (input[x, y + 1] == 1)
-                            count++;
+			for (int x = 1; x < Width - 1; x++)
+			{
+				for (int y = 1; y < Height - 1; y++)
+				{
+					int count = 0;
 
-                        if (count > strength)
-                        {
-                            output[x, y] = 1;
-                        }
-                        else output[x, y] = 0;
-                    }
-                    else output[x, y] = 0;
+					if (input[x, y] == 1)                   // + shape erosion 3x3
+					{
+						if (input[x - 1, y] == 1)
+							count++;
+						if (input[x + 1, y] == 1)
+							count++;
+						if (input[x, y - 1] == 1)
+							count++;
+						if (input[x, y + 1] == 1)
+							count++;
 
-                    
-                }
-            }
-                    return output;
-        }
-
-        private float[,] Dilation(float[,] input, int strength)
-        {
-            float[,] output = new float[Width, Height];
-
-            for (int x = 1; x < Width - 1; x++)
-            {
-                for (int y = 1; y < Height - 1; y++)
-                {
-                    int count = 0;
-                    if (input[x, y] == 0)
-                        output[x, y] = 0;
-                    else
-                    {                                       // Square shape dilation 3x3
-                        if (input[x - 1, y] == 0)
-                            count++;
-                        if (input[x + 1, y] == 0)
-                            count++;
-                        if (input[x, y - 1] == 0)
-                            count++;
-                        if (input[x, y + 1] == 0)
-                            count++;
-                        if (input[x - 1, y-1] == 0)
-                            count++;
-                        if (input[x + 1, y +1] == 0)
-                            count++;
-                        if (input[x-1, y - 1] == 0)
-                            count++;
-                        if (input[x+1, y + 1] == 0)
-                            count++;
-
-                        if (count > strength)
-                        {
-                            output[x, y] = 0;
-                        }
-                        else output[x, y] = 1;
-                    }
-
-                    
-                }
-            }
-
-            return output;
-        }
+						if (count > strength)
+						{
+							output[x, y] = 1;
+						}
+						else output[x, y] = 0;
+					}
+					else output[x, y] = 0;
 
 
-        private Detection[] FloodFillExtraction(float[,] input)
+				}
+			}
+			return output;
+		}
+
+		private float[,] Dilation(float[,] input, int strength)
+		{
+			float[,] output = new float[Width, Height];
+
+			for (int x = 1; x < Width - 1; x++)
+			{
+				for (int y = 1; y < Height - 1; y++)
+				{
+					int count = 0;
+					if (input[x, y] == 0)
+						output[x, y] = 0;
+					else
+					{                                       // Square shape dilation 3x3
+						if (input[x - 1, y] == 0)
+							count++;
+						if (input[x + 1, y] == 0)
+							count++;
+						if (input[x, y - 1] == 0)
+							count++;
+						if (input[x, y + 1] == 0)
+							count++;
+						if (input[x - 1, y - 1] == 0)
+							count++;
+						if (input[x + 1, y + 1] == 0)
+							count++;
+						if (input[x - 1, y - 1] == 0)
+							count++;
+						if (input[x + 1, y + 1] == 0)
+							count++;
+
+						if (count > strength)
+						{
+							output[x, y] = 0;
+						}
+						else output[x, y] = 1;
+					}
+
+
+				}
+			}
+
+			return output;
+		}
+
+
+		private Detection[] FloodFillExtraction(float[,] input)
 		{
 			// STAGE 0: Copy the input to an array that can be manipulated
 			int[,] flood = new int[Width, Height];
@@ -463,7 +468,7 @@ namespace INFOIBV
 
 			foreach (Detection obj in input)
 				if (obj.Size > MinPixels * MinPixels && obj.Size < (Width / 2) * (Height / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
-					output.Add(obj);                            
+					output.Add(obj);
 
 			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
 		}
@@ -477,7 +482,7 @@ namespace INFOIBV
 				for (int y = 0; y < Height; y++)
 				{
 					if (referenceImage.GetPixel(x, y).R > 50)
-						output[x, y] = 1;
+						output[x, y] = 255;
 					else
 						output[x, y] = 0;
 				}
@@ -485,67 +490,63 @@ namespace INFOIBV
 			return output;
 		}
 
-		private Detection[] FindTargetObjects(Detection[] input, float[] curve , float threshold)
-        {
-            List<Detection> outputList = new List<Detection>();
-            foreach( Detection d in input)
-            {
-                if(CompareCurve(d.BoundaryCurve, curve) <= threshold)
-                {
-                    outputList.Add(d);
-                }
-            }
-            return outputList.ToArray();
-        }
+		private Detection[] FindTargetObjects(Detection[] input, float[] curve, float threshold)
+		{
+			List<Detection> outputList = new List<Detection>();
+			foreach (Detection d in input)
+			{
+				if (CompareCurve(d.BoundaryCurve, curve) <= threshold)
+				{
+					outputList.Add(d);
+				}
+			}
+			return outputList.ToArray();
+		}
 
-        private float CompareCurve(float[] detection, float[] curve)
-        {
-            float minSqauredDifferenceSum = float.MaxValue;     //Float to store the smallest difference, set to highest value so any value smaller will replace this
+		private float CompareCurve(float[] detectedCurve, float[] referenceCurve)
+		{
+			float minSquaredDifferenceSum = float.MaxValue; // Float to store the smallest difference, set to highest value so any value smaller will replace this
 
-            for (int o = 0; o < 360; o++)       //Loop over all angles of rotation to compare to the predefined curve
-            {
-                float squaredDifferenceSum = 0.0f;
-                for (int i = o; i < 360 + o; i++)    //Use the angle of rotation as an offset when looping through the arrays
-                {
-                    int index = o;
-                    if (i > 360)
-                        o -= 360;    //If i becomes larger then 360
+			for (int offset = 0; offset < 360; offset++) // Loop over all rotation offsets
+			{
+				float squaredDifferenceSum = 0.0f;
 
-                    float difference = detection[o] - curve[o];
-                    squaredDifferenceSum += difference * difference; //Add the squared difference to the sum
-                }
-                if (squaredDifferenceSum < minSqauredDifferenceSum) //Replace the minimal squared difference when necessary
-                    minSqauredDifferenceSum = squaredDifferenceSum;
-            }
-            return minSqauredDifferenceSum;
-        }
-        private Color[,] DisplayFoundObjects(Color[,] input, Detection[] foundObjects)
-        {
-            Color[,] output = new Color[Width, Height];
+				for (int i = offset; i < 360 + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
+				{
+					int originalIndex = i - offset;
+					int offsetIndex = i % 360;
 
-            for (int x = 0; x < Width; x++)
-            {
-                for (int y = 0; y < Height; y++)
-                {
-                    output[x, y] = input[x, y];
-                }
-            }
-            int i = 10;
-            {
-                foreach (Detection d in foundObjects)
-                {
-                    foreach (Point p in d.Points)
-                    {
-                        output[p.X, p.Y] = Color.FromArgb(i, i, i);
-                    }
-                    if (i < 255)
-                        i += 10;
-                }
+					float difference = detectedCurve[offsetIndex] - referenceCurve[originalIndex];
+					squaredDifferenceSum += difference * difference; //Add the squared difference to the sum
+				}
 
-            }
-            return output;
-        }
-    }
+				minSquaredDifferenceSum = Math.Min(minSquaredDifferenceSum, squaredDifferenceSum);
+			}
+
+			return minSquaredDifferenceSum;
+		}
+
+		private Color[,] DisplayFoundObjects(Detection[] foundObjects)
+		{
+			Color[,] output = new Color[Width, Height];
+
+			for (int x = 0; x < Width; x++)
+				for (int y = 0; y < Height; y++)
+					output[x, y] = Color.Black;
+
+			const int INCREMENT = 30;
+			int i = INCREMENT;
+			foreach (Detection d in foundObjects)
+			{
+				foreach (Point p in d.Points)
+					output[p.X, p.Y] = Color.FromArgb(i, i, i);
+
+				i = (i + INCREMENT) % 256;
+			}
+
+			return output;
+		}
+	}
 
 	class Detection
 	{
@@ -577,21 +578,9 @@ namespace INFOIBV
 		{
 			get; private set;
 		}
-
-		private PointF _center;
 		public PointF Center
 		{
-			get
-			{
-				if (_center == null)
-					CalculateCenter();
-				return _center;
-			}
-
-			private set
-			{
-				_center = value;
-			}
+			get; private set;
 		}
 
 		private float[] _boundarycurve;
@@ -615,6 +604,7 @@ namespace INFOIBV
 			Points = points;
 			Size = points.Count();
 			CalculateBoundingBox();
+			CalculateCenter();
 		}
 
 		private void CalculateBoundingBox()
@@ -624,7 +614,7 @@ namespace INFOIBV
 			Top = int.MaxValue;
 			Bottom = int.MinValue;
 
-			foreach(Point p in Points)
+			foreach (Point p in Points)
 			{
 				if (p.X < Left)
 					Left = p.X;
@@ -639,19 +629,19 @@ namespace INFOIBV
 
 		private void CalculateCenter()
 		{
-            float totalX = 0.0f;
-            float totalY = 0.0f;
+			float totalX = 0.0f;
+			float totalY = 0.0f;
 
-            for(int i = 0; i < Size; i++)
-            {
-                totalX += Points[i].X;
-                totalY += Points[i].Y;
-            }
+			for (int i = 0; i < Size; i++)
+			{
+				totalX += Points[i].X;
+				totalY += Points[i].Y;
+			}
 
-            PointF center = new PointF(totalX / Size, totalY / Size);
+			Center = new PointF(totalX / Size, totalY / Size);
 		}
 
-		private void CalculateBoundary()
+		public void CalculateBoundary()
 		{
 			// Create a temporary bool[,] representation of the object
 			int Width = Right - Left + 1, Height = Bottom - Top + 1;
@@ -662,7 +652,7 @@ namespace INFOIBV
 			BoundaryCurve = new float[STEPS]; // Initialize an array to store the results
 			Vector CenterVec = new Vector(Center.X - Left, Center.Y - Top); // Calculate the center of the workspace
 
-			for(int i = 0; i < STEPS; i++) // Loop over the requested number of directions
+			for (int i = 0; i < STEPS; i++) // Loop over the requested number of directions
 			{
 				// Construct a vector to walk over the workspace with
 				double degrees = i * INTERVAL;
@@ -670,14 +660,14 @@ namespace INFOIBV
 				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / 2;
 				Vector pos = CenterVec; // Set the starting position of the walker
 
-				while (pos.X > 0 && pos.X < Width && pos.Y > 0 && pos.Y < Height) // Keep walking until we run outside the workspace
+				while (pos.X > 0 && pos.X < Width - 1 && pos.Y > 0 && pos.Y < Height - 1) // Keep walking until we run outside the workspace
 				{
 					int x = (int)Math.Round(pos.X);
 					int y = (int)Math.Round(pos.Y);
 
 					if (workspace[x, y]) // If our current position is part of the object
-						// Overwrite any previous value, which means that we detect the outside edges
-						// The default value is 0, which means that no detection defaults to 0
+										 // Overwrite any previous value, which means that we detect the outside edges
+										 // The default value is 0, which means that no detection defaults to 0
 						BoundaryCurve[i] = (float)(new Vector(pos.X - CenterVec.X, pos.Y - CenterVec.Y)).Length;
 
 					pos += vec; // Move the walker
