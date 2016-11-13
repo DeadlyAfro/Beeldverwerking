@@ -76,8 +76,6 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, THRESHOLD);
 
-			// float[,] morphedImage = MorphologicalTransform(thresholdImage);
-
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, MINIMUM_DETECTION_PIXELS);
