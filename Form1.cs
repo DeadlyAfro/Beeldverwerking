@@ -466,7 +466,20 @@ namespace INFOIBV
 			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
 		}
 
-        private Detection[] FindTargetObjects(Detection[] input, float[] curve , float threshold)
+		private float[,] ImportReferenceImage()
+		{
+			float[,] output = new float[Width, Height];
+
+			Bitmap referenceImage = new Bitmap(Application.StartupPath + "\\ReferenceImage.png");
+			for (int x = 0; x < Width; x++)
+				for (int y = 0; y < Height; y++)
+					if (referenceImage.GetPixel(x, y) == Color.White)
+						output[x, y] = 1;
+
+			return output;
+		}
+
+		private Detection[] FindTargetObjects(Detection[] input, float[] curve , float threshold)
         {
             List<Detection> outputList = new List<Detection>();
             foreach( Detection d in input)
