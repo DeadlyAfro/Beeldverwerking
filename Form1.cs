@@ -78,7 +78,8 @@ namespace INFOIBV
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
 
-			// TODO: Normalize shape curve
+			foreach (Detection d in filteredObjects)
+				d.NormalizeBoundary();
 
 			// TODO: Compare curve with reference (which needs to be constructed)
 
@@ -637,6 +638,18 @@ namespace INFOIBV
 					pos += vec; // Move the walker
 				}
 			}
+		}
+
+		public void NormalizeBoundary()
+		{
+			float value = 0;
+
+			for (int i = 0; i < STEPS; i++)
+				value = Math.Max(value, BoundaryCurve[i]);
+
+			if (value > 0)
+				for (int i = 0; i < STEPS; i++)
+					BoundaryCurve[i] /= value;
 		}
 	}
 }
