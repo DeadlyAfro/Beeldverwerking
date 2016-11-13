@@ -598,7 +598,7 @@ namespace INFOIBV
 			Top = int.MaxValue;
 			Bottom = int.MinValue;
 
-			foreach (Point p in Points)
+			foreach (Point p in Points) // Calculate the correct values for each property
 			{
 				Left = Math.Min(Left, p.X);
 				Right = Math.Max(Right, p.X);
@@ -612,7 +612,7 @@ namespace INFOIBV
 			float totalX = 0.0f;
 			float totalY = 0.0f;
 
-			for (int i = 0; i < Size; i++)
+			for (int i = 0; i < Size; i++) // Give each pixel the same weight and calculate the average
 			{
 				totalX += Points[i].X;
 				totalY += Points[i].Y;
