@@ -576,8 +576,8 @@ namespace INFOIBV
 		{
 			Left = int.MaxValue;
 			Right = int.MinValue;
-			Top = int.MinValue;
-			Bottom = int.MaxValue;
+			Top = int.MaxValue;
+			Bottom = int.MinValue;
 
 			foreach(Point p in Points)
 			{
@@ -585,9 +585,9 @@ namespace INFOIBV
 					Left = p.X;
 				if (p.X > Right)
 					Right = p.X;
-				if (p.Y > Top)
+				if (p.Y < Top)
 					Top = p.Y;
-				if (p.Y < Bottom)
+				if (p.Y > Bottom)
 					Bottom = p.Y;
 			}
 		}
@@ -609,7 +609,7 @@ namespace INFOIBV
 		private void CalculateBoundary()
 		{
 			// Create a temporary bool[,] representation of the object
-			int Width = Right - Left, Height = Bottom - Top;
+			int Width = Right - Left + 1, Height = Bottom - Top + 1;
 			bool[,] workspace = new bool[Width, Height];
 			foreach (Point p in Points)
 				workspace[p.X - Left, p.Y - Top] = true;
