@@ -503,6 +503,9 @@ namespace INFOIBV
 
 	class Detection
 	{
+		private const int STEPS = 360;
+		private const double INTERVAL = 360.0 / STEPS;
+
 		public Point[] Points
 		{
 			get; private set;
@@ -604,10 +607,6 @@ namespace INFOIBV
 
 		private void CalculateBoundary()
 		{
-			// Initialize constant
-			const int STEPS = 360;
-			const double INTERVAL = 360.0 / STEPS;
-
 			// Create a temporary bool[,] representation of the object
 			int Width = Right - Left, Height = Bottom - Top;
 			bool[,] workspace = new bool[Width, Height];
