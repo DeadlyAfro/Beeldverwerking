@@ -72,15 +72,17 @@ namespace INFOIBV
 
 			float[,] thresholdImage = ApplyThreshold(edgeImage, 10);
 
-            float[,] morphedImage = MorphologicalTransform(thresholdImage);
+            // float[,] morphedImage = MorphologicalTransform(thresholdImage);
 
 			Detection[] detectedObjects = FloodFillExtraction(thresholdImage);
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
-
+			
 			foreach (Detection d in filteredObjects)
 				d.NormalizeBoundary();
 
+			float[] referenceBoundary = FloodFillExtraction(ImportReferenceImage())[1].BoundaryCurve;
+			
 			// TODO: Compare curve with reference (which needs to be constructed)
 
 			// TODO: Show detections on original image
@@ -473,8 +475,12 @@ namespace INFOIBV
 			Bitmap referenceImage = new Bitmap(Application.StartupPath + "\\ReferenceImage.png");
 			for (int x = 0; x < Width; x++)
 				for (int y = 0; y < Height; y++)
-					if (referenceImage.GetPixel(x, y) == Color.White)
+				{
+					if (referenceImage.GetPixel(x, y).R > 50)
 						output[x, y] = 1;
+					else
+						output[x, y] = 0;
+				}
 
 			return output;
 		}
