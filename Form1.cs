@@ -519,7 +519,33 @@ namespace INFOIBV
             }
             return minSqauredDifferenceSum;
         }
-	}
+        private Color[,] DisplayFoundObjects(Color[,] input, Detection[] foundObjects)
+        {
+            Color[,] output = new Color[Width, Height];
+
+            for (int x = 0; x < Width; x++)
+            {
+                for (int y = 0; y < Height; y++)
+                {
+                    output[x, y] = input[x, y];
+                }
+            }
+            int i = 10;
+            {
+                foreach (Detection d in foundObjects)
+                {
+                    foreach (Point p in d.Points)
+                    {
+                        output[p.X, p.Y] = Color.FromArgb(i, i, i);
+                    }
+                    if (i < 255)
+                        i += 10;
+                }
+
+            }
+            return output;
+        }
+    }
 
 	class Detection
 	{
