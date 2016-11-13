@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Drawing;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 using Vector = System.Windows.Vector;
@@ -13,7 +14,7 @@ namespace INFOIBV
 		private Bitmap InputImage;
 		private Bitmap OutputImage;
 
-		private int Width, Height;
+		private int WIDTH, HEIGHT;
 
 		public INFOIBV()
 		{
@@ -60,9 +61,8 @@ namespace INFOIBV
 			}
 
 			//==========================================================================================
-
-			Width = InputImage.Size.Width;
-			Height = InputImage.Size.Height;
+			WIDTH = InputImage.Size.Width;
+			HEIGHT = InputImage.Size.Height;
 
 			Color[,] grayscaleImage = ConvertToGrayscale(Image);
 
@@ -78,15 +78,7 @@ namespace INFOIBV
 
 			Detection[] filteredObjects = FilterBySize(detectedObjects, 32);
 
-			foreach (Detection d in filteredObjects)
-			{
-				d.CalculateBoundary();
-				d.NormalizeBoundary();
-			}
-
 			Detection referenceObject = FloodFillExtraction(ApplyThreshold(DetectEdges(ImportReferenceImage()), 10))[1];
-			referenceObject.CalculateBoundary();
-			referenceObject.NormalizeBoundary();
 
 			Detection[] targetObjects = FindTargetObjects(filteredObjects, referenceObject.BoundaryCurve, 5);
 
@@ -98,9 +90,9 @@ namespace INFOIBV
 			//==========================================================================================
 
 			// Copy array to output Bitmap
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					OutputImage.SetPixel(x, y, Image[x, y]);               // Set the pixel color at coordinate (x,y)
 				}
@@ -121,14 +113,14 @@ namespace INFOIBV
 
 		private float[,] NormalizeFloats(float[,] input)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
 			float MIN = float.MaxValue, MAX = float.MinValue;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y];
 
@@ -143,9 +135,9 @@ namespace INFOIBV
 
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y];
 
@@ -169,12 +161,12 @@ namespace INFOIBV
 
 		private Color[,] ConvertToImage(float[,] input)
 		{
-			Color[,] output = new Color[Width, Height];
+			Color[,] output = new Color[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y];
 					int grayValue = (int)Math.Round(value * 255);
@@ -191,12 +183,12 @@ namespace INFOIBV
 
 		private Color[,] ConvertToGrayscale(Color[,] input)
 		{
-			Color[,] output = new Color[Width, Height];
+			Color[,] output = new Color[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					Color inputColor = input[x, y];
 					int grayscale = (int)(inputColor.R * 0.3 + inputColor.G * 0.59 + inputColor.B * 0.11); // Calculate grayscale value
@@ -213,12 +205,12 @@ namespace INFOIBV
 
 		private float[,] ConvertToFloat(Color[,] input)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = input[x, y].R; // Calculate grayscale value
 					output[x, y] = value; // Save to output
@@ -233,20 +225,20 @@ namespace INFOIBV
 
 		public float[,] DetectEdges(float[,] input)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					float value = 0;
 
-					if (0 < x && x < Width - 1)
+					if (0 < x && x < WIDTH - 1)
 					{
 						value += Math.Abs((-input[x - 1, y] + input[x + 1, y]) / 3f); // Horizontal (-1, 0, 1) kernel
 					}
-					if (0 < y && y < Height - 1)
+					if (0 < y && y < HEIGHT - 1)
 					{
 						value += Math.Abs((-input[x, y - 1] + input[x, y + 1]) / 3f); // Vertical (-1, 0, 1) kernel
 					}
@@ -263,12 +255,12 @@ namespace INFOIBV
 
 		private float[,] ApplyThreshold(float[,] input, float threshold)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 			progressBar.Value = progressBar.Minimum;
 
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					if (input[x, y] > threshold)
 						output[x, y] = 1;
@@ -294,11 +286,11 @@ namespace INFOIBV
 
 		private float[,] Erosion(float[,] input, int strength)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 
-			for (int x = 1; x < Width - 1; x++)
+			for (int x = 1; x < WIDTH - 1; x++)
 			{
-				for (int y = 1; y < Height - 1; y++)
+				for (int y = 1; y < HEIGHT - 1; y++)
 				{
 					int count = 0;
 
@@ -329,11 +321,11 @@ namespace INFOIBV
 
 		private float[,] Dilation(float[,] input, int strength)
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 
-			for (int x = 1; x < Width - 1; x++)
+			for (int x = 1; x < WIDTH - 1; x++)
 			{
-				for (int y = 1; y < Height - 1; y++)
+				for (int y = 1; y < HEIGHT - 1; y++)
 				{
 					int count = 0;
 					if (input[x, y] == 0)
@@ -371,22 +363,21 @@ namespace INFOIBV
 			return output;
 		}
 
-
 		private Detection[] FloodFillExtraction(float[,] input)
 		{
 			// STAGE 0: Copy the input to an array that can be manipulated
-			int[,] flood = new int[Width, Height];
-			for (int x = 0; x < Width; x++)
-				for (int y = 0; y < Height; y++)
+			int[,] flood = new int[WIDTH, HEIGHT];
+			for (int x = 0; x < WIDTH; x++)
+				for (int y = 0; y < HEIGHT; y++)
 					flood[x, y] = (int)input[x, y]; // Copy the input to an array we can process
 
 			progressBar.Value = progressBar.Minimum;
 
 			// STAGE 1: Use flood fill to find all objects and assign an identifier to all their pixels
 			int ObjectIdentifier = 2; // At this stage, 0 should represent an object and 1 should represent an edge.
-			for (int x = 0; x < Width; x++)
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					if (flood[x, y] == 0) // Discovered new object
 					{
@@ -397,28 +388,16 @@ namespace INFOIBV
 						{
 							Point p = work.Dequeue();
 
-							flood[p.X, p.Y] = ObjectIdentifier;
+							flood[p.X, p.Y] = ObjectIdentifier; // Make sure current point is set as object
 
-							if (p.X > 0 && flood[p.X - 1, p.Y] == 0)
-							{
-								work.Enqueue(new Point(p.X - 1, p.Y));
-								flood[p.X - 1, p.Y] = ObjectIdentifier;
-							}
-							if (p.X < Width - 1 && flood[p.X + 1, p.Y] == 0)
-							{
-								work.Enqueue(new Point(p.X + 1, p.Y));
-								flood[p.X + 1, p.Y] = ObjectIdentifier;
-							}
-							if (p.Y > 0 && flood[p.X, p.Y - 1] == 0)
-							{
-								work.Enqueue(new Point(p.X, p.Y - 1));
-								flood[p.X, p.Y - 1] = ObjectIdentifier;
-							}
-							if (p.Y < Height - 1 && flood[p.X, p.Y + 1] == 0)
-							{
-								work.Enqueue(new Point(p.X, p.Y + 1));
-								flood[p.X, p.Y + 1] = ObjectIdentifier;
-							}
+							for (int i = -1; i <= 1; i++) // In a 3x3 square around the current pixel
+								for (int j = -1; j <= 1; j++)
+									if (p.X + i > 0 && p.X + i < WIDTH && p.Y + j > 0 && p.Y + j < HEIGHT) // Check if we are within boundaries
+										if (flood[p.X + i, p.Y + j] == 0) // Check if the pixel belongs to the object
+										{
+											work.Enqueue(new Point(p.X + i, p.Y + j)); // Add pixel to queue
+											flood[p.X + i, p.Y + j] = ObjectIdentifier; // Set pixel as found
+										}
 						}
 
 						ObjectIdentifier++; // Increase the counter for the next detection
@@ -431,20 +410,20 @@ namespace INFOIBV
 			progressBar.Value = progressBar.Minimum;
 
 			// STAGE 2: Group all pixels of each object
-			List<List<Point>> extract = new List<List<Point>>();
-			for (int x = 0; x < Width; x++)
+			List<List<Point>> extract = new List<List<Point>>(); // Create list to store objects
+			for (int x = 0; x < WIDTH; x++)
 			{
-				for (int y = 0; y < Height; y++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					if (flood[x, y] > 1) // Part of object found
 					{
-						int Identifier = flood[x, y] - 2;
+						int Identifier = flood[x, y] - 2; // Subtract the offset from stage 1
 
-						if (extract.Count < Identifier) // Should never happen
+						if (extract.Count < Identifier) // Should never happen. Zero-based Count should also give leading index for new objects
 							throw new Exception("SHIT");
 
 						if (extract.Count == Identifier) // Object not yet stored
-							extract.Add(new List<Point>());
+							extract.Add(new List<Point>()); // Create new object
 
 						extract[Identifier].Add(new Point(x, y)); // Add point to the correct object
 					}
@@ -456,7 +435,7 @@ namespace INFOIBV
 			// STAGE 3: Reconstruct a detected object from its pixels.
 			Detection[] output = new Detection[extract.Count];
 			for (int i = 0; i < extract.Count; i++)
-				output[i] = new Detection(extract[i].ToArray());
+				output[i] = new Detection(extract[i].ToArray()); // Create Detection objects with list of pixels
 
 			progressBar.Value = progressBar.Minimum;
 			return output.ToArray();
@@ -467,7 +446,7 @@ namespace INFOIBV
 			List<Detection> output = new List<Detection>();
 
 			foreach (Detection obj in input)
-				if (obj.Size > MinPixels * MinPixels && obj.Size < (Width / 2) * (Height / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
+				if (obj.Size > MinPixels * MinPixels && obj.Size < (WIDTH / 2) * (HEIGHT / 2))   //Filter out all objects with a surface smaller than the minimal pixelsize squared 
 					output.Add(obj);
 
 			return output.ToArray(); ;        //Return a new (smaller) array with the objects within the correct size range
@@ -475,11 +454,11 @@ namespace INFOIBV
 
 		private float[,] ImportReferenceImage()
 		{
-			float[,] output = new float[Width, Height];
+			float[,] output = new float[WIDTH, HEIGHT];
 
 			Bitmap referenceImage = new Bitmap(Application.StartupPath + "\\ReferenceImage.png");
-			for (int x = 0; x < Width; x++)
-				for (int y = 0; y < Height; y++)
+			for (int x = 0; x < WIDTH; x++)
+				for (int y = 0; y < HEIGHT; y++)
 				{
 					if (referenceImage.GetPixel(x, y).R > 50)
 						output[x, y] = 255;
@@ -507,14 +486,14 @@ namespace INFOIBV
 		{
 			float minSquaredDifferenceSum = float.MaxValue; // Float to store the smallest difference, set to highest value so any value smaller will replace this
 
-			for (int offset = 0; offset < 360; offset++) // Loop over all rotation offsets
+			for (int offset = 0; offset < Detection.SCAN_RESOLUTION; offset++) // Loop over all rotation offsets
 			{
 				float squaredDifferenceSum = 0.0f;
 
-				for (int i = offset; i < 360 + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
+				for (int i = offset; i < Detection.SCAN_RESOLUTION + offset; i++) // Use the angle of rotation as an offset when looping through the arrays
 				{
 					int originalIndex = i - offset;
-					int offsetIndex = i % 360;
+					int offsetIndex = i % Detection.SCAN_RESOLUTION;
 
 					float difference = detectedCurve[offsetIndex] - referenceCurve[originalIndex];
 					squaredDifferenceSum += difference * difference; //Add the squared difference to the sum
@@ -528,10 +507,10 @@ namespace INFOIBV
 
 		private Color[,] DisplayFoundObjects(Detection[] foundObjects)
 		{
-			Color[,] output = new Color[Width, Height];
+			Color[,] output = new Color[WIDTH, HEIGHT];
 
-			for (int x = 0; x < Width; x++)
-				for (int y = 0; y < Height; y++)
+			for (int x = 0; x < WIDTH; x++)
+				for (int y = 0; y < HEIGHT; y++)
 					output[x, y] = Color.Black;
 
 			const int INCREMENT = 30;
@@ -550,18 +529,9 @@ namespace INFOIBV
 
 	class Detection
 	{
-		private const int STEPS = 360;
-		private const double INTERVAL = 360.0 / STEPS;
+		public const int SCAN_RESOLUTION = 360;
+		public const double SCAN_INTERVAL = 360.0 / SCAN_RESOLUTION;
 
-		public Point[] Points
-		{
-			get; private set;
-		}
-
-		public int Size
-		{
-			get; private set;
-		}
 		public int Left
 		{
 			get; private set;
@@ -578,33 +548,32 @@ namespace INFOIBV
 		{
 			get; private set;
 		}
+		public int Size
+		{
+			get { return Points.Length; }
+		}
+
+		public Point[] Points
+		{
+			get; private set;
+		}
 		public PointF Center
 		{
 			get; private set;
 		}
-
-		private float[] _boundarycurve;
 		public float[] BoundaryCurve
 		{
-			get
-			{
-				if (_boundarycurve == null)
-					CalculateBoundary();
-				return _boundarycurve;
-			}
-
-			private set
-			{
-				_boundarycurve = value;
-			}
+			get; private set;
 		}
 
 		public Detection(Point[] points)
 		{
 			Points = points;
-			Size = points.Count();
 			CalculateBoundingBox();
 			CalculateCenter();
+
+			CalculateBoundary();
+			NormalizeBoundary();
 		}
 
 		private void CalculateBoundingBox()
@@ -641,7 +610,7 @@ namespace INFOIBV
 			Center = new PointF(totalX / Size, totalY / Size);
 		}
 
-		public void CalculateBoundary()
+		private void CalculateBoundary()
 		{
 			// Create a temporary bool[,] representation of the object
 			int Width = Right - Left + 1, Height = Bottom - Top + 1;
@@ -649,13 +618,13 @@ namespace INFOIBV
 			foreach (Point p in Points)
 				workspace[p.X - Left, p.Y - Top] = true;
 
-			BoundaryCurve = new float[STEPS]; // Initialize an array to store the results
+			BoundaryCurve = new float[SCAN_RESOLUTION]; // Initialize an array to store the results
 			Vector CenterVec = new Vector(Center.X - Left, Center.Y - Top); // Calculate the center of the workspace
 
-			for (int i = 0; i < STEPS; i++) // Loop over the requested number of directions
+			for (int i = 0; i < SCAN_RESOLUTION; i++) // Loop over the requested number of directions
 			{
 				// Construct a vector to walk over the workspace with
-				double degrees = i * INTERVAL;
+				double degrees = i * SCAN_INTERVAL;
 				double radians = degrees * Math.PI / 180;
 				Vector vec = new Vector(Math.Cos(radians), Math.Sin(radians)) / 2;
 				Vector pos = CenterVec; // Set the starting position of the walker
@@ -675,15 +644,15 @@ namespace INFOIBV
 			}
 		}
 
-		public void NormalizeBoundary()
+		private void NormalizeBoundary()
 		{
 			float value = 0;
 
-			for (int i = 0; i < STEPS; i++)
+			for (int i = 0; i < SCAN_RESOLUTION; i++)
 				value = Math.Max(value, BoundaryCurve[i]);
 
 			if (value > 0)
-				for (int i = 0; i < STEPS; i++)
+				for (int i = 0; i < SCAN_RESOLUTION; i++)
 					BoundaryCurve[i] /= value;
 		}
 	}
